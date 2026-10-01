@@ -1,6 +1,6 @@
 # ❄️ PolarConnect — Integrated Polar Science Outreach, Knowledge Repository & Media Dissemination Portal
 
-[![Smart India Hackathon 2024](https://img.shields.io/badge/SIH-Problem%20Statement%2026063-blue.svg?style=flat-square)](https://www.sih.gov.in/)
+[![Smart India Hackathon 2026](https://img.shields.io/badge/SIH%202026-Problem%20Statement%2026063-blue.svg?style=flat-square)](https://www.sih.gov.in/)
 [![Stakeholders](https://img.shields.io/badge/MoES%20%2F%20NCPOR-Polar%20Science-0077be.svg?style=flat-square)](https://ncpor.res.in/)
 [![FAIR & CARE](https://img.shields.io/badge/Compliance-FAIR%20%26%20CARE-00c853.svg?style=flat-square)](docs/data-governance.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6.svg?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -289,7 +289,7 @@ curl http://localhost:4000/api/eval/rag-benchmark
 - **Ministry of Earth Sciences (MoES)**, Government of India
 - **National Centre for Polar and Ocean Research (NCPOR)**, Vasco da Gama, Goa
 - **National Polar Data Centre (NPDC)**
-- **Smart India Hackathon (SIH 2024)** — Problem Statement 26063
+- **Smart India Hackathon (SIH 2026)** — Problem Statement 26063
 
 ---
 
