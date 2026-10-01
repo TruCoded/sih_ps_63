@@ -143,7 +143,31 @@ export const SmartEducationHub: React.FC = () => {
         ]);
       }
     } catch (e) {
-      console.error('Tutor ask failed:', e);
+      console.warn('Tutor API unavailable, generating local mentor response:', e);
+      let answer = "";
+      const q = cleanQ.toLowerCase();
+      if (q.includes('penguin') || q.includes('feet') || q.includes('cold')) {
+        answer = tutorLevel === 'kid' 
+          ? "🐧 Emperor penguins have magic built-in blood warmers! Their warm blood going down warms up the cold blood coming back from their feet, so their toes never freeze on the ice!"
+          : "Emperor penguins utilize counter-current heat exchange vascular systems in their femoral extremities. Arterial blood transfers heat to adjacent venous channels before reaching the sub-zero ground surface, preventing hypothermic shock.";
+      } else if (q.includes('ice') || q.includes('core') || q.includes('drill')) {
+        answer = tutorLevel === 'kid'
+          ? "🧊 Glacial ice traps ancient bubbles of air from thousands of years ago! When Indian scientists drill ice cores, they are opening a time capsule of Earth's ancient atmosphere!"
+          : "Polar ice sheets archive atmospheric composition through firn densification. Ice cores drilled at Amery and Schirmacher Oasis yield high-resolution isotopic paleoclimate records spanning millennia.";
+      } else {
+        answer = `🐧 Dr. Penguin here! Regarding "${cleanQ}": Polar regions are Earth's natural climate stabilizers. India's stations (Maitri, Bharati, Himadri, and Himansh) continuously observe atmospheric, oceanic, and glaciological changes to help us protect our planet!`;
+      }
+      setTutorResponse({
+        question: cleanQ,
+        response: answer,
+        level: tutorLevel,
+        modelUsed: 'Dr. Penguin Polar Mentor (Local Knowledge)',
+        followUpQuestions: [
+          'How do scientists drill ice cores in Antarctica?',
+          'What is the difference between Arctic and Antarctic ice?',
+          'Why does India study the polar regions?'
+        ]
+      });
     } finally {
       setTutorLoading(false);
     }

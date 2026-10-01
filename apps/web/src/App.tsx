@@ -14,35 +14,36 @@ import { AuditLogViewer } from './components/AuditLogViewer.tsx';
 import { Footer } from './components/Footer.tsx';
 import { StationTelemetry, Expedition, Asset, UserRole, PolarProgramme } from '../../../packages/shared-types/index.js';
 import { Download, CheckCircle2, X } from 'lucide-react';
+import seedData from './data/seed-data.json';
 
 export const App: React.FC = () => {
   const [currentRole, setCurrentRole] = useState<UserRole>('public_visitor');
   const [activeTab, setActiveTab] = useState<string>('command');
 
-  const [stations, setStations] = useState<StationTelemetry[]>([]);
-  const [expeditions, setExpeditions] = useState<Expedition[]>([]);
-  const [assets, setAssets] = useState<Asset[]>([]);
+  const [stations, setStations] = useState<StationTelemetry[]>((seedData as any).stations || []);
+  const [expeditions, setExpeditions] = useState<Expedition[]>((seedData as any).expeditions || []);
+  const [assets, setAssets] = useState<Asset[]>((seedData as any).assets || []);
   const [downloadModal, setDownloadModal] = useState<any | null>(null);
   const [selectedAssetForProv, setSelectedAssetForProv] = useState<string | undefined>(undefined);
 
-  // Initial Data Fetching from API
+  // Initial Data Fetching from API (refreshes state with live data)
   useEffect(() => {
     // 1. Fetch Stations
     fetch('/api/stations/weather')
       .then(r => r.json())
-      .then(d => { if (d.success) setStations(d.data); })
+      .then(d => { if (d.success && d.data && d.data.length > 0) setStations(d.data); })
       .catch(e => console.error('Stations fetch error:', e));
 
     // 2. Fetch Expeditions
     fetch('/api/expeditions')
       .then(r => r.json())
-      .then(d => { if (d.success) setExpeditions(d.data); })
+      .then(d => { if (d.success && d.data && d.data.length > 0) setExpeditions(d.data); })
       .catch(e => console.error('Expeditions fetch error:', e));
 
     // 3. Fetch Assets
     fetch(`/api/assets/catalogue?userRole=${currentRole}`)
       .then(r => r.json())
-      .then(d => { if (d.success) setAssets(d.data); })
+      .then(d => { if (d.success && d.data && d.data.length > 0) setAssets(d.data); })
       .catch(e => console.error('Assets fetch error:', e));
   }, [currentRole]);
 

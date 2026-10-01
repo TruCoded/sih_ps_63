@@ -48,12 +48,14 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`=======================================================`);
-  console.log(`❄️  PolarConnect API Server (LLM Enhanced) on port ${PORT}`);
-  console.log(`🌐 Base URL: http://localhost:${PORT}/api`);
-  console.log(`📋 National Centre for Polar and Ocean Research (NCPOR)`);
-  console.log(`=======================================================`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`=======================================================`);
+    console.log(`❄️  PolarConnect API Server (LLM Enhanced) on port ${PORT}`);
+    console.log(`🌐 Base URL: http://localhost:${PORT}/api`);
+    console.log(`📋 National Centre for Polar and Ocean Research (NCPOR)`);
+    console.log(`=======================================================`);
+  });
+}
 
 export default app;
