@@ -1,0 +1,20 @@
+{
+  "name": "polarconnect-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PolarConnect - Integrated Polar Science Outreach, Knowledge Repository, and Media Dissemination Portal (SIH 26063)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build:api": "npm run build --workspace=apps/api",
+    "build:web": "npm run build --workspace=apps/web",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

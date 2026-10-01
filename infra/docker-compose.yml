@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  polar-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: polar-web
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:4000/api
+    depends_on:
+      - polar-api
+    restart: unless-stopped
+
+  polar-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: polar-api
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - CORS_ORIGIN=http://localhost:3000
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: polar-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.6
+    container_name: polar-meilisearch
+    ports:
+      - "7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=polarconnect_master_key_2024
+    restart: unless-stopped
