@@ -329,16 +329,16 @@ export const StationCommandHUD: React.FC<StationCommandHUDProps> = ({
             </div>
 
             {/* Quick Actions Footer */}
-            <div className="border-t border-[var(--border)] pt-4 mt-4 flex items-center justify-between">
+            <div className="border-t border-[var(--border)] pt-4 mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="text-[11px] font-mono text-[var(--muted-foreground)] flex items-center">
-                <Clock className="w-3.5 h-3.5 mr-1 text-[var(--signal)]" />
+                <Clock className="w-3.5 h-3.5 mr-1 text-[var(--signal)] shrink-0" />
                 <span>Last Telemetry Sync: Just now</span>
               </div>
 
               {onSelectExpeditionByProgramme && (
                 <button
                   onClick={() => onSelectExpeditionByProgramme(selectedStation.programme)}
-                  className="px-4 py-2 rounded-lg bg-[var(--primary)] hover:bg-[var(--deep)] text-[var(--primary-foreground)] font-mono text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--deep)] active:bg-[var(--deep)] text-[var(--primary-foreground)] font-mono text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer min-h-[40px]"
                 >
                   <span>Explore {selectedStation.programme} Voyages</span>
                   <ArrowUpRight className="w-3.5 h-3.5" />

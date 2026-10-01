@@ -132,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Desktop Navigation Links */}
-        <nav className="desktop-nav" aria-label="Main navigation">
+        <nav className="desktop-nav hidden xl:flex" aria-label="Main navigation">
           {primaryNavItems.map(item => {
             const isActive = activeTab === item.id;
             return (
@@ -195,25 +195,25 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
 
         {/* Right Section: Role Selector + Explore Archive Action Button */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* User Role Selector Dropdown */}
           <div ref={roleRef} className="relative">
             <button
               onClick={() => setRoleMenuOpen(!roleMenuOpen)}
-              className="flex items-center gap-2 bg-[var(--card)] hover:bg-[var(--secondary)] border border-[var(--border)] px-3.5 py-1.5 rounded-full text-xs text-[var(--foreground)] transition-all shadow-2xs hover:shadow-xs cursor-pointer"
+              className="flex items-center gap-1.5 sm:gap-2 bg-[var(--card)] hover:bg-[var(--secondary)] border border-[var(--border)] px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs text-[var(--foreground)] transition-all shadow-2xs hover:shadow-xs cursor-pointer min-h-[36px]"
               aria-label="Switch User Role"
             >
-              {React.createElement(roleMeta[currentRole].icon, { className: 'w-3.5 h-3.5 text-[var(--signal)]' })}
+              {React.createElement(roleMeta[currentRole].icon, { className: 'w-3.5 h-3.5 text-[var(--signal)] shrink-0' })}
               <span className="font-semibold hidden sm:inline">{roleMeta[currentRole].label}</span>
-              <span className="sm:hidden font-semibold">{roleMeta[currentRole].badge}</span>
+              <span className="sm:hidden font-semibold text-[11px]">{roleMeta[currentRole].badge}</span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[var(--secondary)] text-[var(--muted-foreground)] hidden md:inline border border-[var(--border)] font-medium">
                 {roleMeta[currentRole].badge}
               </span>
-              <ChevronDown className="w-3 h-3 text-[var(--muted-foreground)]" />
+              <ChevronDown className="w-3 h-3 text-[var(--muted-foreground)] shrink-0" />
             </button>
 
             {roleMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl p-1.5 z-50 animate-in fade-in duration-150">
+              <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-24px)] bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-xl p-1.5 z-50 animate-in fade-in duration-150">
                 <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-[var(--muted-foreground)] font-bold border-b border-[var(--border)] mb-1">
                   Simulate Platform Persona
                 </div>
@@ -227,20 +227,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                         onRoleChange(roleKey as UserRole);
                         setRoleMenuOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                      className={`w-full text-left px-3 py-2 rounded-lg flex items-center justify-between text-xs transition-colors cursor-pointer min-h-[40px] ${
                         isCurrent 
                           ? 'bg-[var(--secondary)] font-bold text-[var(--foreground)]' 
                           : 'text-[var(--foreground)] hover:bg-[var(--secondary)]'
                       }`}
                     >
-                      <span className="flex items-center gap-2.5">
-                        <Icon className={`w-3.5 h-3.5 ${isCurrent ? 'text-[var(--signal)]' : 'text-[var(--muted-foreground)]'}`} />
-                        <div>
+                      <span className="flex items-center gap-2.5 min-w-0 pr-2">
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? 'text-[var(--signal)]' : 'text-[var(--muted-foreground)]'}`} />
+                        <div className="min-w-0">
                           <div className="font-semibold leading-tight">{meta.label}</div>
                           <div className="text-[10px] text-[var(--muted-foreground)] line-clamp-1">{meta.desc}</div>
                         </div>
                       </span>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-[var(--card)] text-[var(--muted-foreground)] border border-[var(--border)]">
                           {meta.badge}
                         </span>
@@ -265,7 +265,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Mobile Menu Trigger */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="xl:hidden p-2 rounded-lg border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--secondary)] cursor-pointer"
+            className="xl:hidden p-2 rounded-lg border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--secondary)] active:bg-[var(--secondary)] cursor-pointer min-w-[38px] min-h-[38px] flex items-center justify-center"
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -275,11 +275,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (
-        <div className="xl:hidden border-t border-[var(--border)] py-4 px-6 bg-[var(--background)]">
-          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-3">
+        <div className="xl:hidden border-t border-[var(--border)] py-4 px-4 sm:px-6 bg-[var(--background)] animate-in slide-in-from-top-2 duration-150 shadow-lg max-h-[calc(100dvh-120px)] overflow-y-auto">
+          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2.5">
             <span className="text-[var(--signal)] mr-1.5">01 /</span> Explore PolarConnect
           </p>
-          <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
             {primaryNavItems.map(item => {
               const isActive = activeTab === item.id;
               return (
@@ -289,14 +289,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onTabChange(item.id);
                     setMobileMenuOpen(false);
                   }}
-                  className={`flex items-center justify-between px-3 py-2 rounded-[var(--radius)] text-xs font-medium text-left transition-all cursor-pointer ${
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-[var(--radius)] text-xs font-medium text-left transition-all cursor-pointer min-h-[44px] ${
                     isActive
                       ? 'bg-[var(--secondary)] text-[var(--signal)] font-bold border border-[var(--border)]'
-                      : 'text-[var(--foreground)] hover:bg-[var(--secondary)]'
+                      : 'text-[var(--foreground)] hover:bg-[var(--secondary)] active:bg-[var(--secondary)]'
                   }`}
                 >
                   <span>{item.label}</span>
-                  <ArrowUpRight className="w-3 h-3 text-[var(--muted-foreground)]" />
+                  <ArrowUpRight className="w-3.5 h-3.5 text-[var(--muted-foreground)]" />
                 </button>
               );
             })}
@@ -305,7 +305,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2">
             <span className="text-[var(--signal)] mr-1.5">02 /</span> Workspace & Governance
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {workspaceNavItems.map(item => {
               if (item.showFor && !item.showFor.includes(currentRole)) return null;
               const isActive = activeTab === item.id;
@@ -317,17 +317,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onTabChange(item.id);
                     setMobileMenuOpen(false);
                   }}
-                  className={`flex items-center justify-between px-3 py-2 rounded-[var(--radius)] text-xs font-medium text-left transition-all cursor-pointer ${
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-[var(--radius)] text-xs font-medium text-left transition-all cursor-pointer min-h-[44px] ${
                     isActive
                       ? 'bg-[var(--secondary)] text-[var(--signal)] font-bold border border-[var(--border)]'
-                      : 'text-[var(--foreground)] hover:bg-[var(--secondary)]'
+                      : 'text-[var(--foreground)] hover:bg-[var(--secondary)] active:bg-[var(--secondary)]'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
-                    <Icon className="w-3.5 h-3.5 text-[var(--muted-foreground)]" />
-                    {item.label}
+                  <span className="flex items-center gap-2.5">
+                    <Icon className="w-4 h-4 text-[var(--muted-foreground)] shrink-0" />
+                    <span className="truncate">{item.label}</span>
                   </span>
-                  <ArrowUpRight className="w-3 h-3 text-[var(--muted-foreground)]" />
+                  <ArrowUpRight className="w-3.5 h-3.5 text-[var(--muted-foreground)] shrink-0" />
                 </button>
               );
             })}

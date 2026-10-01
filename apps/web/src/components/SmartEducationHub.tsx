@@ -269,9 +269,9 @@ export const SmartEducationHub: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Main Tutor Dialogue Box */}
           <div className="lg:col-span-8 bg-[var(--card)] rounded-2xl p-6 sm:p-8 border border-emerald-500/30 space-y-6 shadow-xs">
-            <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[var(--border)] pb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-2xl bg-[var(--secondary)] border border-[var(--border)] flex items-center justify-center text-2xl shadow-xs">
+                <div className="w-12 h-12 rounded-2xl bg-[var(--secondary)] border border-[var(--border)] flex items-center justify-center text-2xl shadow-xs shrink-0">
                   🐧
                 </div>
                 <div>
@@ -281,7 +281,7 @@ export const SmartEducationHub: React.FC = () => {
               </div>
 
               {/* Learning Level Selector */}
-              <div className="flex items-center space-x-1 bg-[var(--secondary)] p-1 rounded-full border border-[var(--border)] text-[11px] font-mono">
+              <div className="flex items-center space-x-1 bg-[var(--secondary)] p-1 rounded-full border border-[var(--border)] text-[11px] font-mono self-start sm:self-auto">
                 {[
                   { id: 'kid', label: 'Age 8-12' },
                   { id: 'high_school', label: 'High School' },
