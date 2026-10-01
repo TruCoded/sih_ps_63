@@ -201,7 +201,11 @@ export const ScientificCatalogue: React.FC<ScientificCatalogueProps> = ({
               key={asset.id}
               className="border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] flex flex-col justify-between group hover:border-[var(--ring)] transition-all rounded-[var(--radius)] shadow-xs"
             >
-              <div>
+              <div 
+                onClick={() => setInspectAsset(asset)}
+                className="cursor-pointer"
+                title={`Click to inspect ${asset.title}`}
+              >
                 {/* Record Image Thumbnail */}
                 <div className="relative aspect-[1.7] overflow-hidden bg-[var(--secondary)]">
                   <img
