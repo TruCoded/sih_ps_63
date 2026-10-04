@@ -178,7 +178,7 @@ export class RAGEngine {
       assetTitle: s.chunk.assetTitle,
       versionId: s.chunk.versionId,
       pageOrTimeLocator: s.chunk.pageOrTimeLocator,
-      chunkSnippet: s.chunk.text.substring(0, 220) + '...',
+      chunkSnippet: s.chunk.text.length > 800 ? s.chunk.text.substring(0, 800) + '...' : s.chunk.text,
       sourceUrl: s.chunk.sourceUrl,
       relevanceScore: Number(Math.min(0.99, 0.70 + s.score * 0.03).toFixed(2))
     }));
