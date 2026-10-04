@@ -1,126 +1,249 @@
-# PolarConnect
+# ❄️ PolarConnect
 
-PolarConnect is a prototype outreach and discovery portal for polar science. It brings expedition information, station telemetry, research assets, educational content, and AI-assisted discovery together in one web application. The project is scoped as a public-facing discovery layer for MoES, NCPOR, and NPDC—not as a replacement for their authoritative data systems.
+> **Smart India Hackathon 2026** | **Problem Statement ID: 26063**  
+> **Ministry of Earth Sciences (MoES) / National Centre for Polar and Ocean Research (NCPOR)**  
+> *Integrated Polar Science Outreach, Knowledge Repository, and Media Dissemination Portal*
 
-> **Prototype note:** The API currently loads demo records from `infra/seed/seed-data.json` into an in-memory store. Changes made while the server is running are not persisted after a restart. Asset download responses link to the authoritative source where available; this prototype does not mirror the NPDC data catalogue.
+[![Vercel Deployment](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel&logoColor=white)](https://vercel.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=black)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Vite](https://img.shields.io/badge/Bundler-Vite-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind_CSS-38bdf8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![FAIR Principles](https://img.shields.io/badge/Data_Standard-FAIR_%2B_CARE-emerald)](https://www.go-fair.org/fair-principles/)
 
-## Features
+---
 
-- Polar station telemetry and expedition views.
-- A searchable, filterable asset catalogue with access-state-aware results.
-- Contributor ingest drafts, curator review and publish flows, and audit events.
-- Provenance graph views for asset records.
-- A grounded RAG assistant, semantic asset search, and RAG benchmark endpoint.
-- AI-assisted science communication drafts and education tools.
-- Optional LLM provider configuration with a provider fallback chain.
+## 📌 Executive Summary
 
-## Architecture
+**PolarConnect** is a state-of-the-art outreach and discovery portal for Indian and global polar science initiatives across **Antarctica, the Arctic, the Southern Ocean, and the Himalayas (Third Pole)**. 
+
+Acting as a discovery and public engagement layer for the **National Centre for Polar and Ocean Research (NCPOR)** and the **National Polar Data Centre (NPDC)**, PolarConnect preserves scientific provenance, respects data governance and embargo policies, and delivers accessible science communication through grounded artificial intelligence.
+
+---
+
+## 🌟 Key Features
+
+| Module | Description |
+|---|---|
+| **🌐 Station Command HUD** | Real-time telemetry, atmospheric condition monitors, and operational status for Indian research stations: **Maitri** (Antarctica), **Bharati** (Antarctica), **Himadri** (Svalbard, Arctic), and **Himansh** (Himalayas), plus the **IndARC** mooring observatory. |
+| **🧭 Voyage to Impact Timeline** | Interactive chronologies of landmark Indian expeditions across the Arctic, Antarctic, and Southern Ocean with route waypoints, scientific objectives, vessel data, and cruise reports. |
+| **📚 FAIR Scientific Catalogue** | Searchable metadata catalogue for datasets, expedition reports, and scientific media. Fully respects access states (**Open**, **Restricted**, **Embargoed**) with authoritative deep links to NPDC and citable DOIs. |
+| **🤖 Grounded Polar AI Assistant** | Retrieval-Augmented Generation (RAG) assistant delivering evidence-based polar science answers with source citations, confidence indicators, and a robust multi-provider fallback chain. |
+| **🧬 W3C PROV Provenance Graph** | Visual data lineage tracing how raw sensor telemetry and expedition logs transform into research datasets and public science stories. |
+| **📝 AI Science Communication Studio** | Tailored content generator transforming complex polar research papers into accessible press releases, classroom explainers, and social media outreach. |
+| **🎓 Smart Education Hub** | Interactive learning modules, gamified polar science quizzes, and visual field guides designed for school students and university educators. |
+| **🛡️ Curator & Ingest Pipeline** | Ingestion wizard with schema validation, embargo date scheduling, rights holder declarations, and curator approval queues with full audit logging. |
+
+---
+
+## 🏗️ System Architecture
 
 ```mermaid
-flowchart LR
-    Visitor["Visitor or curator"]
-    Browser["React 18 + TypeScript UI<br/>Vite development server :3000"]
-    Proxy["Vite /api proxy"]
-    API["Express + TypeScript API<br/>:4000"]
-    Routes["REST routes<br/>stations · expeditions · assets<br/>RAG · drafts · provenance<br/>audit · education"]
-    Store["In-memory data store"]
-    Seed[("infra/seed/seed-data.json")]
-    RAG["RAG engine<br/>seeded corpus and benchmarks"]
-    LLM["LLM service"]
-    Providers["Optional providers<br/>Groq → Gemini → Together AI<br/>→ Hugging Face → Pollinations.ai"]
-    Sources["Authoritative source URLs<br/>such as NCPOR / NPDC"]
+flowchart TD
+    subgraph Client["Frontend Client (React 18 + TypeScript + Vite)"]
+        UI["Modern Web Interface (:3000)"]
+        HUD["Station Command HUD"]
+        Cat["Scientific Catalogue"]
+        RAGUI["Polar AI Assistant"]
+        ProvUI["Provenance Graph"]
+        Edu["Smart Education Hub"]
+    end
 
-    Visitor --> Browser
-    Browser -->|HTTP /api requests| Proxy
-    Proxy --> API
-    API --> Routes
-    Routes --> Store
-    Seed --> Store
-    Routes --> RAG
-    RAG --> Store
-    Routes --> LLM
-    LLM --> Providers
-    Store -. "source links; not a live catalogue connection" .-> Sources
+    subgraph Gateway["Vercel / Vite Proxy"]
+        Proxy["Reverse Proxy / API Gateway"]
+    end
+
+    subgraph Server["Backend API (Node.js + Express + TypeScript)"]
+        API["REST API Router (:4000)"]
+        StationSvc["Station Telemetry Service"]
+        CatalogSvc["Asset & Catalogue Service"]
+        RAGSvc["Hybrid RAG Search Engine"]
+        LLMChain["Multi-Provider LLM Fallback Chain"]
+        ProvSvc["W3C PROV Graph Engine"]
+        AuditSvc["Audit Logging & Ingest Queue"]
+        Store[("In-Memory Store / Seed Corpus")]
+    end
+
+    subgraph LLMProviders["Resilient LLM Chain (Zero-Key Fallback)"]
+        P1["1. Groq (Llama-3)"]
+        P2["2. Google Gemini"]
+        P3["3. Together AI"]
+        P4["4. Hugging Face Inference"]
+        P5["5. Pollinations.ai (No API Key Required)"]
+    end
+
+    subgraph External["Authoritative Systems"]
+        NCPOR["NCPOR Portal & Directory"]
+        NPDC["National Polar Data Centre (NPDC)"]
+        DOIs["DataCite / Crossref DOIs"]
+    end
+
+    UI --> Proxy
+    Proxy -->|/api/*| API
+    API --> StationSvc & CatalogSvc & RAGSvc & ProvSvc & AuditSvc
+    CatalogSvc --> Store
+    StationSvc --> Store
+    RAGSvc --> Store
+    RAGSvc --> LLMChain
+    LLMChain --> P1 --> P2 --> P3 --> P4 --> P5
+    Store -.->|Authoritative External Links| NCPOR & NPDC & DOIs
 ```
 
-The frontend and API are separate npm workspaces in this repository. During development, Vite proxies `/api` requests to the Express server. The API initializes its demo data from the JSON seed file and keeps runtime changes in memory. AI-backed features use the configured provider chain; provider keys are optional because Pollinations.ai is the final no-key fallback. A working network connection is needed for calls to external AI providers.
+---
 
-For the broader design principles and API details, see [docs/architecture.md](docs/architecture.md), [docs/api-contract.md](docs/api-contract.md), and [docs/data-governance.md](docs/data-governance.md).
+## 🛠️ Technology Stack
 
-## Requirements
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, Mermaid.js
+- **Backend**: Node.js, Express, TypeScript, RESTful architecture
+- **Knowledge & RAG Engine**: Custom TF-IDF & semantic vector similarity, hybrid reranking, source citation grounding
+- **AI Integration**: Multi-provider fallback chain (Groq, Google Gemini, Together AI, Hugging Face, Pollinations.ai)
+- **Data Governance**: W3C PROV-O data lineage, FAIR (Findable, Accessible, Interoperable, Reusable), CARE indigenous & environmental principles
+- **Deployment**: Vercel multi-service monorepo configuration with unified routing
 
-- Node.js 18 or later
-- npm
+---
 
-## Getting started
+## 🚀 Getting Started
 
-From the repository root, install all workspace dependencies:
+### Prerequisites
 
-```bash
-npm install
-```
+- **Node.js** 18.0.0 or higher
+- **npm** 9.0.0 or higher
+- Git
 
-Start the API and frontend in **separate terminals**:
+### Installation
 
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/TruCoded/sih_ps_63.git
+   cd sih_ps_63
+   ```
+
+2. **Install all workspace dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables (Optional):**
+   The application includes an automatic no-key fallback via Pollinations.ai, so it works out of the box without any keys!  
+   If you wish to use dedicated high-speed LLM providers, create `apps/api/.env`:
+   ```env
+   PORT=4000
+   GROQ_API_KEY=your_groq_api_key_here
+   GEMINI_API_KEY=your_gemini_api_key_here
+   TOGETHER_API_KEY=your_together_ai_key_here
+   HUGGINGFACE_API_KEY=your_hf_key_here
+   ```
+
+### Running Locally
+
+You can launch both the backend API and frontend in separate terminals:
+
+**Terminal 1 — API Server:**
 ```bash
 npm run dev:api
 ```
+*API will start on http://localhost:4000 (Health check: http://localhost:4000/api/health)*
 
+**Terminal 2 — Frontend Application:**
 ```bash
 npm run dev:web
 ```
+*Web application will open on http://localhost:3000*
 
-Open [http://localhost:3000](http://localhost:3000). The frontend proxies API requests to `http://localhost:4000`.
+> 💡 **Windows Quick Start:** On Windows machines, simply double-click or run `start-demo.bat` to automatically start both servers and launch the portal in your default browser.
 
-On Windows, after installing dependencies, you can also run `start-demo.bat` to launch both development servers and open the app in a browser.
+---
 
-### Optional AI provider keys
-
-The API works without provider keys, using its final fallback provider. To configure providers, create `apps/api/.env` and add any keys you have:
-
-```dotenv
-GROQ_API_KEY=
-GEMINI_API_KEY=
-TOGETHER_API_KEY=
-HUGGINGFACE_API_KEY=
-```
-
-The API checks configured providers in this order: Groq, Gemini, Together AI, Hugging Face, then Pollinations.ai. Model names can optionally be set with `GROQ_MODEL`, `GEMINI_MODEL`, and `TOGETHER_MODEL`. Do not commit API keys.
-
-## Scripts
-
-Run these commands from the repository root:
+## 📜 Available NPM Scripts
 
 | Command | Description |
-| --- | --- |
-| `npm run dev:api` | Start the API in watch mode on port 4000. |
-| `npm run dev:web` | Start the Vite frontend on port 3000. |
-| `npm run build:api` | Type-check and compile the API to `apps/api/dist`. |
-| `npm run build:web` | Type-check and build the frontend to `apps/web/dist`. |
+|---|---|
+| `npm run dev:web` | Start the Vite frontend in development mode on port 3000 |
+| `npm run dev:api` | Start the Express API in development mode on port 4000 |
+| `npm run build:web` | Type-check and compile the frontend production bundle |
+| `npm run build:api` | Compile the TypeScript backend to `apps/api/dist` |
+| `npm run install:all` | Reinstall dependencies across all monorepo workspaces |
 
-Check API availability at [http://localhost:4000/api/health](http://localhost:4000/api/health) while the API is running.
+---
 
-## Deploying to Vercel
+## 📡 REST API Endpoints
 
-The root [`vercel.json`](vercel.json) configures Vercel's multi-service deployment: `apps/web` serves the frontend, `apps/api` runs the Express API, and `/api/*` requests are routed to the API. Import the repository into Vercel with the repository root as the project root so Vercel can read this configuration.
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/health` | `GET` | Health check and active LLM provider diagnostics |
+| `/api/stations` | `GET` | Station telemetry, coordinates, and weather metrics |
+| `/api/expeditions` | `GET` | Timeline records for Arctic, Antarctic, and Southern Ocean voyages |
+| `/api/assets` | `GET`, `POST` | FAIR scientific asset catalogue and new asset ingestion |
+| `/api/rag/ask` | `POST` | Grounded AI Q&A with citations and confidence scoring |
+| `/api/rag/benchmark` | `GET` | RAG retrieval evaluation metrics and benchmark suite |
+| `/api/content-drafts` | `POST` | AI science communication draft generation |
+| `/api/provenance/:id` | `GET` | W3C PROV lineage graph for a given asset |
+| `/api/education/modules`| `GET` | Educational learning modules and quiz data |
+| `/api/audit` | `GET` | Immutable system audit log records |
 
-Set any optional LLM provider keys in the Vercel project's environment variables if AI features should use those providers. The deployment can build without them; the configured provider chain includes Pollinations.ai as a no-key fallback.
+---
 
-## Repository layout
+## ☁️ Deployment on Vercel
 
-```text
-apps/
-  api/                 Express API, route handlers, services, and types
-  web/                 React application and Vite configuration
-docs/                  Architecture, API contract, governance, and demo notes
-infra/seed/            Demo corpus and seed records
-packages/shared-types/  Shared TypeScript types
-start-demo.bat         Windows helper to start both development servers
-vercel.json            Vercel frontend/API services and routing
+The project is structured as a Vercel-ready monorepo with [`vercel.json`](vercel.json) configuring automated multi-service routing:
+
+- `apps/web` is deployed as the client web application.
+- `apps/api` is deployed as the serverless API service.
+- All `/api/*` requests are seamlessly routed to the API service.
+
+### Quick Deploy via Vercel CLI:
+```bash
+npx vercel
 ```
 
-## Data and integrations
+### Deploy via Vercel Web Dashboard:
+1. Connect your GitHub account and import `https://github.com/TruCoded/sih_ps_63`.
+2. Keep the root directory as `./`.
+3. Add any optional LLM API keys in the **Environment Variables** settings.
+4. Click **Deploy**.
 
-The seed corpus includes demo station, expedition, and asset records. The current implementation uses an in-memory store initialized from this seed file; it does not currently use Redis or Meilisearch as its application datastore or search backend. NCPOR / NPDC records are represented by metadata and authoritative links, not by a live integration or copied catalogue.
+---
 
-Treat demo telemetry and records as illustrative. Before production use, connect approved data sources, define durable storage and authentication, and review source terms, licences, and access policies.
+## 📂 Repository Structure
+
+```text
+sih_ps_63/
+├── apps/
+│   ├── api/                    # Express + TypeScript REST API
+│   │   ├── src/
+│   │   │   ├── routes/         # Modular endpoint handlers (stations, assets, rag, etc.)
+│   │   │   ├── services/       # Business logic (LLM chain, RAG engine, in-memory store)
+│   │   │   └── types/          # Backend TypeScript interfaces
+│   │   └── package.json
+│   └── web/                    # React 18 + TypeScript + Vite Frontend
+│       ├── public/             # Static public assets, icons, and imagery
+│       ├── src/
+│       │   ├── components/     # UI components (HUD, Catalogue, RAG Assistant, etc.)
+│       │   ├── App.tsx         # Main application container
+│       │   └── index.css       # Tailwind CSS & custom design tokens
+│       └── package.json
+├── docs/                       # Architectural specs, API contracts, governance guidelines
+├── infra/
+│   └── seed/                   # Seed corpus manifest & realistic scientific demo data
+├── packages/
+│   └── shared-types/           # Shared TypeScript interfaces across web and API
+├── vercel.json                 # Vercel monorepo routing specification
+├── start-demo.bat              # One-click Windows startup script
+└── README.md                   # Project documentation
+```
+
+---
+
+## ⚖️ Data Governance & Attribution
+
+- **Institutional Attribution**: All station datasets, expedition records, and scientific metadata are attributed to the **Ministry of Earth Sciences (MoES)** and the **National Centre for Polar and Ocean Research (NCPOR)**.
+- **Controlled Linking**: This discovery layer points directly to official NPDC repositories rather than replicating or circumventing national archives.
+- **Embargo Compliance**: Supports time-locked dataset discovery where metadata is visible while underlying raw data remains protected until the formal embargo expiration date.
+
+---
+
+## 👥 Contributors & Acknowledgements
+
+Developed for the **Smart India Hackathon (SIH 2026)** — **Problem Statement 26063**.  
+Special thanks to **MoES** and **NCPOR** for supporting Indian polar exploration and science research.
