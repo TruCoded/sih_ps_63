@@ -139,37 +139,62 @@ export const ScientificCatalogue: React.FC<ScientificCatalogueProps> = ({
     setTimeout(() => setCitationCopiedId(null), 2500);
   };
 
+  const ASSET_ID_IMAGES: Record<string, string> = {
+    // 1. Avian Ecology & Emperor / Adélie Penguins
+    'ncpor-bio-penguins': '/assets/antarctic-penguins.jpg',
+    // 2. 43rd Indian Scientific Expedition (Deep Ice Core Drilling & Field Operations)
+    'ncpor-rep-43isea': '/assets/ice-core-expedition.jpg',
+    // 3. Maitri Station Decadal Surface Meteorology (AWS & Weather Tower)
+    'ncpor-ds-maitri-met': '/assets/polar-station.jpg',
+    // 4. 12th Southern Ocean Cruise (ORV Sagar Nidhi / CTD Rosette)
+    'ncpor-cr-so-12': '/assets/research-ship.jpg',
+    // 5. Aurora Australis Glow over Bharati Station
+    'ncpor-img-bharati-aurora': '/assets/aurora-bharati.jpg',
+    // 6. Himadri Arctic Aerosol Deployment (Kongsfjorden Fjord Coast)
+    'ncpor-img-himadri-fjord': '/assets/polar-hero-clear.jpg',
+    // 7. Chandra Basin / Himansh High Altitude Observatory (Western Himalayas)
+    'ncpor-vid-chandra-himansh': '/assets/himansh-himalayas.jpg',
+    // 8. Spiti Valley Ice Core Chemistry
+    'ncpor-ds-spiti-icecore': '/assets/field-notes.jpg',
+  };
+
   const getRecordImage = (asset: Asset) => {
     const id = asset.id || '';
+    
+    // Strict priority: direct asset ID lookup first
+    if (ASSET_ID_IMAGES[id]) {
+      return ASSET_ID_IMAGES[id];
+    }
+
     const title = (asset.title + ' ' + (asset.subjects || []).join(' ') + ' ' + asset.spatialCoverageName).toLowerCase();
 
-    // 1. Direct ID & Topic Matching to ensure every single record has a unique, stunning polar image
-    if (id === 'ncpor-bio-penguins' || title.includes('penguin') || title.includes('avian') || title.includes('rookery')) {
+    // Fallback keyword matching
+    if (title.includes('penguin') || title.includes('avian') || title.includes('rookery')) {
       return '/assets/antarctic-penguins.jpg';
     }
-    if (id === 'ncpor-img-bharati-aurora' || title.includes('aurora') || title.includes('space weather')) {
+    if (title.includes('aurora') || title.includes('space weather')) {
       return '/assets/aurora-bharati.jpg';
     }
-    if (id === 'ncpor-vid-chandra-himansh' || title.includes('himansh') || title.includes('chandra') || title.includes('himalaya') || title.includes('spiti')) {
+    if (title.includes('himansh') || title.includes('chandra') || title.includes('himalaya') || title.includes('spiti')) {
       return '/assets/himansh-himalayas.jpg';
     }
-    if (id === 'ncpor-cr-so-12' || title.includes('southern ocean') || title.includes('ctd') || title.includes('cruise') || title.includes('hydrograph')) {
+    if (title.includes('southern ocean') || title.includes('ctd') || title.includes('cruise') || title.includes('hydrograph')) {
       return '/assets/research-ship.jpg';
     }
-    if (id === 'ncpor-ds-maitri-met' || title.includes('maitri') || title.includes('meteorological') || title.includes('surface temp')) {
-      return '/assets/polar-station.jpg';
+    if (title.includes('43rd') || title.includes('isea') || title.includes('ice core') || title.includes('drilling')) {
+      return '/assets/ice-core-expedition.jpg';
     }
-    if (id === 'ncpor-rep-43isea' || title.includes('43rd') || title.includes('isea') || title.includes('technical report')) {
+    if (title.includes('bharati') || title.includes('larsemann')) {
       return '/assets/bharati-station.jpg';
     }
-    if (id === 'ncpor-img-himadri-fjord' || title.includes('himadri') || title.includes('kongsfjorden') || title.includes('svalbard') || title.includes('ny-ålesund') || title.includes('arctic')) {
+    if (title.includes('maitri') || title.includes('meteorological') || title.includes('weather')) {
+      return '/assets/polar-station.jpg';
+    }
+    if (title.includes('himadri') || title.includes('svalbard') || title.includes('ny-ålesund') || title.includes('arctic')) {
       return '/assets/polar-hero-clear.jpg';
     }
     if (title.includes('ocean') || title.includes('marine') || title.includes('sea')) {
       return '/assets/southern-ocean.jpg';
-    }
-    if (title.includes('core') || title.includes('drill') || title.includes('paleoclimate')) {
-      return '/assets/field-notes.jpg';
     }
     return '/assets/antarctica-hero.jpg';
   };

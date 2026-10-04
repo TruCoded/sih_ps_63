@@ -93,7 +93,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
           {/* Project Identity Pill */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-mono font-semibold bg-white/10 backdrop-blur-md border border-white/20 text-sky-200 mb-5 shadow-lg">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>SMART INDIA HACKATHON 2024 &bull; PS-63</span>
+            <span>SMART INDIA HACKATHON 2026 &bull; PS-63</span>
             <span className="text-white/40">|</span>
             <span className="text-slate-300">MoES / NCPOR</span>
           </div>
