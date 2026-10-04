@@ -6,3 +6,5 @@ dist/
 *.log
 .vercel/
 kindred-palette-works/
+
+.vercel

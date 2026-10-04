@@ -4,7 +4,8 @@
 > **Ministry of Earth Sciences (MoES) / National Centre for Polar and Ocean Research (NCPOR)**  
 > *Integrated Polar Science Outreach, Knowledge Repository, and Media Dissemination Portal*
 
-[![Vercel Deployment](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel&logoColor=white)](https://vercel.com)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-sihps63--main.vercel.app-0070F3?logo=vercel&logoColor=white)](https://sihps63-main.vercel.app)
+[![Vercel Deployment](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel&logoColor=white)](https://sihps63-main.vercel.app)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=black)](https://react.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green?logo=node.js&logoColor=white)](https://nodejs.org/)
