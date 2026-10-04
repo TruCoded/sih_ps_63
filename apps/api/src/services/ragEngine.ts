@@ -111,6 +111,38 @@ export class RAGEngine {
       }
     });
 
+    // 2b. Index expeditions for comprehensive mission and objective discovery
+    try {
+      const expeditions = store.getExpeditions();
+      expeditions.forEach(exp => {
+        chunks.push({
+          assetId: exp.id,
+          assetTitle: exp.title,
+          versionId: 'v1',
+          pageOrTimeLocator: 'Expedition Dossier & Scientific Charter',
+          sourceUrl: `https://npdc.ncpor.res.in/expeditions/${exp.slug}`,
+          text: `Expedition: ${exp.title}. Programme: ${exp.programme}. Region: ${exp.region}. Dates: ${exp.startDate} to ${exp.endDate}. Lead Scientist: ${exp.leadScientist}. Vessel/Base: ${exp.vesselOrBase}. Summary: ${exp.publicSummary}. Scientific Objectives: ${exp.scientificObjectives.join('; ')}`,
+          keywords: [exp.title, exp.slug, exp.programme, exp.region, exp.leadScientist, 'ISEA', '43-ISEA', '43rd ISEA', 'objectives', ...exp.scientificObjectives]
+        });
+      });
+
+      // 2c. Index stations and live observations
+      const stations = store.getStations();
+      stations.forEach(st => {
+        chunks.push({
+          assetId: st.stationId,
+          assetTitle: `${st.name} Station Profile & Observation`,
+          versionId: 'v1',
+          pageOrTimeLocator: 'NCPOR / IMD Real-time Telemetry Feed',
+          sourceUrl: `https://data.ncpor.res.in/stations/${st.stationId}`,
+          text: `${st.name} (${st.programme} Programme) located at coordinates ${st.latitude}, ${st.longitude} (Elevation: ${st.altitudeMeters}m). Operational Status: ${st.status}. Established: ${st.establishedYear}. Current Telemetry: Temperature ${st.temperatureC}°C, Wind Speed ${st.windSpeedKnots} knots (${st.windDirectionDeg}°), Pressure ${st.pressureHpa} hPa, Humidity ${st.humidityPercent}%, Solar Radiation ${st.solarRadiationWm2} W/m². Primary Source: ${st.source}.`,
+          keywords: [st.name, st.stationId, st.programme, 'weather', 'temperature', 'wind', 'telemetry', 'Maitri', 'Bharati', 'Himadri', 'Himansh']
+        });
+      });
+    } catch (e) {
+      console.error('[RAGEngine] Error indexing expeditions/stations:', e);
+    }
+
     // 3. Keyword / Semantic scoring
     const words = cleanPrompt.split(/\s+/).filter(w => w.length > 2);
     const scoredChunks = chunks.map(chunk => {
