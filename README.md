@@ -100,6 +100,12 @@ Run these commands from the repository root:
 
 Check API availability at [http://localhost:4000/api/health](http://localhost:4000/api/health) while the API is running.
 
+## Deploying to Vercel
+
+The root [`vercel.json`](vercel.json) configures Vercel's multi-service deployment: `apps/web` serves the frontend, `apps/api` runs the Express API, and `/api/*` requests are routed to the API. Import the repository into Vercel with the repository root as the project root so Vercel can read this configuration.
+
+Set any optional LLM provider keys in the Vercel project's environment variables if AI features should use those providers. The deployment can build without them; the configured provider chain includes Pollinations.ai as a no-key fallback.
+
 ## Repository layout
 
 ```text
@@ -110,6 +116,7 @@ docs/                  Architecture, API contract, governance, and demo notes
 infra/seed/            Demo corpus and seed records
 packages/shared-types/  Shared TypeScript types
 start-demo.bat         Windows helper to start both development servers
+vercel.json            Vercel frontend/API services and routing
 ```
 
 ## Data and integrations
