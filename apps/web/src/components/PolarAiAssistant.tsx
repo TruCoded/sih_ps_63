@@ -196,7 +196,7 @@ export const PolarAiAssistant: React.FC<PolarAiAssistantProps> = ({ userRole, on
         }
       ],
       groundingConfidence: 99,
-      modelUsed: "Groq (openai/gpt-oss-120b Live LLM)",
+      modelUsed: "PolarConnect Intelligence Engine",
       timestamp: "Just now"
     }
   ]);
@@ -262,61 +262,7 @@ export const PolarAiAssistant: React.FC<PolarAiAssistantProps> = ({ userRole, on
         setMessages(prev => [...prev, aiMsg]);
       }
     } catch (err) {
-      console.warn('RAG Query API unavailable, generating local grounded response:', err);
-      const q = queryText.toLowerCase();
-      let fallbackAnswer = "";
-      let fallbackCitations: RAGCitation[] = [];
-
-      if (q.includes('objective') || q.includes('43') || q.includes('isea') || q.includes('expedition')) {
-        fallbackAnswer = "The 43rd Indian Scientific Expedition to Antarctica (43-ISEA) focused on four key pillars: (1) paleoclimate reconstruction via shallow ice core drilling at Amery Ice Shelf, (2) geomagnetic pulsation studies and auroral electrojet mapping at Maitri and Bharati stations, (3) extremophile microbial bioprospecting in Schirmacher Oasis lakes, and (4) geotechnical baseline surveys for the upcoming Maitri-II modern base station.";
-        fallbackCitations = [{
-          assetId: 'ncpor-rep-43isea',
-          assetTitle: '43rd Indian Scientific Expedition to Antarctica Report',
-          versionId: 'ver-43rep-v1',
-          pageOrTimeLocator: 'Page 14, Section 3.2',
-          sourceUrl: 'https://data.ncpor.res.in/PolarDirectory/home',
-          chunkSnippet: 'The expedition achieved 100% of planned scientific milestones including ice coring and atmospheric instrumentation...',
-          relevanceScore: 0.96
-        }];
-      } else if (q.includes('weather') || q.includes('temperature') || q.includes('station')) {
-        fallbackAnswer = "India operates year-round research stations: Maitri (-18.4°C) and Bharati (-14.2°C) in Antarctica, Himadri (-2.1°C) in the Arctic (Svalbard), and Himansh (-11.5°C) in the Western Himalayas. Real-time automatic weather stations record ambient air temperature, wind velocity, and solar radiation with telemetry relayed via INSAT satellite links to NCPOR / NPDC.";
-        fallbackCitations = [{
-          assetId: 'ncpor-met-maitri-decadal',
-          assetTitle: 'Decadal Surface Meteorology - Maitri Station',
-          versionId: 'ver-met-v2',
-          pageOrTimeLocator: 'Table 4, AWS Observation Feed',
-          sourceUrl: 'https://data.ncpor.res.in/',
-          chunkSnippet: 'Automatic weather station telemetry continuously records surface temperature, wind velocity, and pressure at 10-minute intervals...',
-          relevanceScore: 0.94
-        }];
-      } else if (q.includes('embargo') || q.includes('classified') || q.includes('restricted')) {
-        fallbackAnswer = "Refusal: This query targets proprietary research subject to NCPOR Polar Data Policy embargo guidelines. Data is protected for an initial 2-to-5 year lock-in period before public dissemination to protect early-career scientific publications.";
-      } else {
-        fallbackAnswer = `PolarConnect Knowledge Base: Regarding "${queryText}", official expedition records and datasets are curated under the Ministry of Earth Sciences (MoES) and National Centre for Polar and Ocean Research (NCPOR). For detailed analytical data and DOI registration, consult the National Polar Data Centre (NPDC).`;
-        fallbackCitations = [{
-          assetId: 'ncpor-rep-43isea',
-          assetTitle: 'NCPOR Polar Science Expedition Compendium',
-          versionId: 'ver-1.0',
-          pageOrTimeLocator: 'Section 1.1',
-          sourceUrl: 'https://npdc.ncpor.res.in/',
-          chunkSnippet: 'Research records from Antarctica, Arctic, and Southern Ocean programs are archived under FAIR guidelines...',
-          relevanceScore: 0.90
-        }];
-      }
-
-      const isRefusal = fallbackAnswer.startsWith('Refusal:');
-      const fallbackAiMsg: ChatMessage = {
-        id: `ai-${Date.now()}`,
-        role: 'assistant',
-        content: fallbackAnswer,
-        citations: fallbackCitations,
-        groundingConfidence: isRefusal ? 0 : 96,
-        modelUsed: 'PolarConnect Grounded Knowledge Engine',
-        isUnsupportedOrGap: false,
-        isRefusal,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      setMessages(prev => [...prev, fallbackAiMsg]);
+      console.error('RAG Query Failed:', err);
     } finally {
       setLoading(false);
     }
@@ -353,6 +299,7 @@ export const PolarAiAssistant: React.FC<PolarAiAssistantProps> = ({ userRole, on
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: userRole })
       });
+      // Note: /api/benchmarks/run is now registered in the API server (was 404 before)
       const data = await res.json();
       if (data.success) {
         setBenchmarkReport(data.data);
@@ -385,7 +332,7 @@ export const PolarAiAssistant: React.FC<PolarAiAssistantProps> = ({ userRole, on
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-mono bg-[var(--card)] text-emerald-700 border border-emerald-500/30 font-bold shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-              Groq 120B Live • RAG
+              PolarAI • Grounded RAG
             </span>
           </div>
         </div>
@@ -428,7 +375,7 @@ export const PolarAiAssistant: React.FC<PolarAiAssistantProps> = ({ userRole, on
                             <span className="text-[11px] font-bold text-[var(--foreground)]">PolarAI</span>
                             {msg.modelUsed && (
                               <span className="text-[10px] text-[var(--muted-foreground)] font-mono hidden sm:inline">
-                                · {msg.modelUsed.includes('Groq') ? 'Groq 120B' : msg.modelUsed.substring(0, 28)}
+                                · PolarConnect AI
                               </span>
                             )}
                           </div>
@@ -564,14 +511,20 @@ export const PolarAiAssistant: React.FC<PolarAiAssistantProps> = ({ userRole, on
             <input
               type="text"
               value={queryInput}
-              onChange={(e) => setQueryInput(e.target.value)}
+              onChange={(e) => setQueryInput(e.target.value.slice(0, 500))}
               onKeyDown={(e) => e.key === 'Enter' && handleSendQuery(queryInput)}
               placeholder="Ask about expeditions, stations, ice cores, policies..."
+              maxLength={500}
               className="w-full bg-[var(--card)] border border-[var(--border)] rounded-xl pl-5 pr-14 py-3.5
                 text-sm text-[var(--foreground)] placeholder-[var(--muted-foreground)]
                 focus:outline-none focus:border-[var(--ring)]
                 transition-all shadow-xs"
             />
+            {queryInput.length > 400 && (
+              <span className="absolute left-4 -bottom-5 text-[10px] font-mono text-[var(--muted-foreground)]">
+                {queryInput.length}/500
+              </span>
+            )}
             <button
               disabled={loading || !queryInput.trim()}
               onClick={() => handleSendQuery(queryInput)}

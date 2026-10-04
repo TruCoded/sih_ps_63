@@ -19,6 +19,181 @@ interface StationCommandHUDProps {
   onSelectExpeditionByProgramme?: (prog: PolarProgramme) => void;
 }
 
+// ─── Real Polar Stereographic Projection ─────────────────────────────────────
+// Uses azimuthal stereographic math: r = 2·R·tan((90° - |lat|) / 2)
+// South-pole view (left panel): Maitri, Bharati, Dakshin Gangotri
+// North-pole view (right panel): Himadri (Svalbard), Himansh (Himalaya)
+
+interface PolarMapProps {
+  stations: StationTelemetry[];
+  selectedStationId: string;
+  onSelectStation: (id: string) => void;
+}
+
+function polarProject(lat: number, lon: number, poleLat: number, size: number): { x: number; y: number } {
+  const R = size * 0.46; // max radius = 46% of panel half-width
+  const latRad = (Math.abs(lat - poleLat) * Math.PI) / 180; // angular distance from pole
+  const lonRad = (lon * Math.PI) / 180;
+  const r = 2 * Math.tan(latRad / 2) * R;
+  // For south pole: flip lon direction
+  const sign = poleLat < 0 ? -1 : 1;
+  return {
+    x: size / 2 + sign * r * Math.sin(lonRad),
+    y: size / 2 - r * Math.cos(lonRad),
+  };
+}
+
+function GraticuleRings({ cx, cy, R }: { cx: number; cy: number; R: number }) {
+  // Rings at 80°, 70°, 60° from pole
+  const rings = [10, 20, 30].map(deg => {
+    const r = 2 * Math.tan((deg * Math.PI) / 180 / 2) * R;
+    return r;
+  });
+  const meridians = [0, 45, 90, 135, 180, 225, 270, 315];
+  return (
+    <>
+      {rings.map((r, i) => (
+        <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+          stroke="currentColor" strokeWidth="0.5"
+          strokeDasharray={i === 2 ? '3 3' : '2 4'} />
+      ))}
+      {meridians.map(deg => {
+        const rad = (deg * Math.PI) / 180;
+        return (
+          <line key={deg}
+            x1={cx} y1={cy}
+            x2={cx + Math.sin(rad) * rings[2]}
+            y2={cy - Math.cos(rad) * rings[2]}
+            stroke="currentColor" strokeWidth="0.4" strokeDasharray="1 5" />
+        );
+      })}
+    </>
+  );
+}
+
+const PolarStereographicMap: React.FC<PolarMapProps> = ({ stations, selectedStationId, onSelectStation }) => {
+  const W = 700; const H = 320;
+  const leftCx = W * 0.27; const rightCx = W * 0.73; const cy = H / 2;
+  const R = H * 0.44;
+
+  // Classify stations by hemisphere
+  const southStations = stations.filter(s => s.latitude < 0);
+  const northStations = stations.filter(s => s.latitude >= 0);
+
+  const renderMarker = (st: StationTelemetry, proj: { x: number; y: number }, offsetX = 0) => {
+    const isSelected = st.stationId === selectedStationId;
+    const isActive = st.status === 'active';
+    const cx2 = proj.x + offsetX;
+    const label = st.name.replace(' Station', '').replace(' Research Station', '').replace(' Station', '');
+    return (
+      <g key={st.stationId} onClick={() => onSelectStation(st.stationId)} style={{ cursor: 'pointer' }}>
+        {/* Pulse ring when selected */}
+        {isSelected && (
+          <circle cx={cx2} cy={proj.y} r="12" fill="none"
+            stroke="#f97316" strokeWidth="1.5" opacity="0.6">
+            <animate attributeName="r" values="8;16;8" dur="2s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.8;0;0.8" dur="2s" repeatCount="indefinite" />
+          </circle>
+        )}
+        {/* Outer glow */}
+        <circle cx={cx2} cy={proj.y} r="8"
+          fill={isSelected ? '#f9731620' : '#ffffff10'}
+          stroke={isSelected ? '#f97316' : '#94a3b8'}
+          strokeWidth={isSelected ? 1.5 : 1} />
+        {/* Inner dot */}
+        <circle cx={cx2} cy={proj.y} r={isActive ? 4 : 3}
+          fill={isSelected ? '#f97316' : isActive ? '#22c55e' : '#64748b'} />
+        {/* Label */}
+        <text x={cx2} y={proj.y + 17} textAnchor="middle"
+          fontSize="8" fill={isSelected ? '#f97316' : '#64748b'}
+          fontFamily="monospace" fontWeight={isSelected ? 'bold' : 'normal'}>
+          {label.length > 10 ? label.slice(0, 10) : label}
+        </text>
+      </g>
+    );
+  };
+
+  return (
+    <div className="relative w-full rounded-xl border border-[var(--border)] bg-[var(--secondary)] overflow-hidden" style={{ height: 320 }}>
+      <svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg"
+        className="text-[var(--foreground)]/15">
+
+        {/* Background */}
+        <rect width={W} height={H} fill="transparent" />
+
+        {/* Divider */}
+        <line x1={W / 2} y1={12} x2={W / 2} y2={H - 12}
+          stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" />
+
+        {/* ── SOUTH POLE PANEL (Antarctica) ── */}
+        <GraticuleRings cx={leftCx} cy={cy} R={R} />
+        {/* Ocean fill */}
+        <circle cx={leftCx} cy={cy} r={R * 0.67} fill="#1e3a5f" opacity="0.12" />
+        {/* Antarctica rough outline (simplified polygon at ~70°S boundary) */}
+        <path
+          d={`M ${leftCx + R * 0.25} ${cy - R * 0.05}
+              L ${leftCx + R * 0.38} ${cy + R * 0.22}
+              L ${leftCx + R * 0.18} ${cy + R * 0.42}
+              L ${leftCx - R * 0.05} ${cy + R * 0.48}
+              L ${leftCx - R * 0.28} ${cy + R * 0.40}
+              L ${leftCx - R * 0.44} ${cy + R * 0.18}
+              L ${leftCx - R * 0.36} ${cy - R * 0.08}
+              L ${leftCx - R * 0.14} ${cy - R * 0.22}
+              L ${leftCx + R * 0.10} ${cy - R * 0.20}
+              Z`}
+          fill="#e2e8f0" fillOpacity="0.25" stroke="#94a3b8" strokeWidth="0.8" />
+
+        {/* South station markers */}
+        {southStations.map(st => {
+          const proj = polarProject(st.latitude, st.longitude, -90, H);
+          return renderMarker(st, { x: proj.x - H / 2 + leftCx, y: proj.y }, 0);
+        })}
+
+        {/* Panel label */}
+        <text x={leftCx} y={H - 8} textAnchor="middle" fontSize="9"
+          fill="#64748b" fontFamily="monospace">
+          South Polar — 60°S→90°S
+        </text>
+
+        {/* ── NORTH POLE PANEL (Arctic / Himalaya) ── */}
+        <GraticuleRings cx={rightCx} cy={cy} R={R} />
+        {/* Arctic ocean fill */}
+        <circle cx={rightCx} cy={cy} r={R * 0.55} fill="#1e3a5f" opacity="0.12" />
+
+        {/* North station markers */}
+        {northStations.map(st => {
+          // Himalaya (Himansh ~32°N) is not truly polar — place it on North panel at correct r
+          const proj = polarProject(st.latitude, st.longitude, 90, H);
+          return renderMarker(st, { x: proj.x - H / 2 + rightCx, y: proj.y }, 0);
+        })}
+
+        {/* Panel label */}
+        <text x={rightCx} y={H - 8} textAnchor="middle" fontSize="9"
+          fill="#64748b" fontFamily="monospace">
+          North Polar — 30°N→90°N
+        </text>
+
+        {/* Pole markers */}
+        <circle cx={leftCx} cy={cy} r="3" fill="#f97316" opacity="0.8" />
+        <text x={leftCx + 5} y={cy + 4} fontSize="7" fill="#f97316" fontFamily="monospace">90°S</text>
+        <circle cx={rightCx} cy={cy} r="3" fill="#3b82f6" opacity="0.8" />
+        <text x={rightCx + 5} y={cy + 4} fontSize="7" fill="#3b82f6" fontFamily="monospace">90°N</text>
+      </svg>
+
+      {/* Corner labels */}
+      <div className="absolute top-2 left-3 text-[10px] font-mono text-[var(--muted-foreground)] bg-[var(--card)] px-2 py-0.5 rounded-full border border-[var(--border)]">
+        WGS84 · Azimuthal Stereographic
+      </div>
+      <div className="absolute top-2 right-3 flex items-center gap-1.5 text-[10px] font-mono text-[var(--muted-foreground)]">
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
+        Live AWS
+      </div>
+    </div>
+  );
+};
+
+
+
 export const StationCommandHUD: React.FC<StationCommandHUDProps> = ({ 
   stations,
   onSelectExpeditionByProgramme 
@@ -101,80 +276,12 @@ export const StationCommandHUD: React.FC<StationCommandHUDProps> = ({
             </span>
           </div>
 
-          {/* Stylized Polar Projection Canvas */}
-          <div className="relative w-full h-[360px] bg-[var(--secondary)] rounded-xl border border-[var(--border)] flex items-center justify-center overflow-hidden">
-            {/* Latitude Grid Circles */}
-            <svg className="absolute inset-0 w-full h-full text-[var(--foreground)]/10 pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="100%" height="100%" fill="none" />
-              <circle cx="50%" cy="50%" r="35%" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" />
-              <circle cx="50%" cy="50%" r="22%" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" />
-              <circle cx="50%" cy="50%" r="10%" fill="none" stroke="currentColor" strokeWidth="1" />
-              <line x1="0" y1="50%" x2="100%" y2="50%" stroke="currentColor" strokeWidth="1" strokeDasharray="2 4" />
-              <line x1="50%" y1="0" x2="50%" y2="100%" stroke="currentColor" strokeWidth="1" strokeDasharray="2 4" />
-            </svg>
-
-            {/* Central Polar Axis Label */}
-            <div className="absolute top-3 left-3 text-[10px] font-mono text-[var(--muted-foreground)] bg-[var(--card)] px-2.5 py-1 rounded-full border border-[var(--border)] shadow-2xs">
-              Lat: -90°S to +90°N • Station Array
-            </div>
-
-            {/* Interactive Station Markers */}
-            <div className="relative w-full h-full">
-              {filteredStations.map((st) => {
-                const isSelected = st.stationId === selectedStationId;
-                
-                let posX = '50%';
-                let posY = '50%';
-                if (st.stationId === 'st-maitri') {
-                  posX = '42%';
-                  posY = '72%';
-                } else if (st.stationId === 'st-bharati') {
-                  posX = '68%';
-                  posY = '76%';
-                } else if (st.stationId === 'st-himadri') {
-                  posX = '52%';
-                  posY = '22%';
-                } else if (st.stationId === 'st-himansh') {
-                  posX = '74%';
-                  posY = '45%';
-                } else if (st.stationId === 'st-dg') {
-                  posX = '36%';
-                  posY = '68%';
-                }
-
-                return (
-                  <div
-                    key={st.stationId}
-                    style={{ left: posX, top: posY }}
-                    onClick={() => setSelectedStationId(st.stationId)}
-                    className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-10"
-                  >
-                    {/* Beacon Node */}
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                      isSelected 
-                        ? 'bg-[var(--signal)]/20 ring-2 ring-[var(--signal)] scale-110' 
-                        : 'bg-[var(--card)]/90 hover:bg-[var(--card)] border border-[var(--border)] shadow-xs'
-                    }`}>
-                      <div className={`w-3.5 h-3.5 rounded-full ${
-                        st.status === 'active' 
-                          ? isSelected ? 'bg-[var(--signal)] ring-2 ring-white animate-pulse' : 'bg-[var(--signal)]' 
-                          : 'bg-slate-400'
-                      }`} />
-                    </div>
-
-                    {/* Floating Station Tag */}
-                    <div className={`absolute left-1/2 -translate-x-1/2 mt-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono whitespace-nowrap transition-all shadow-md ${
-                      isSelected
-                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-bold scale-105'
-                        : 'bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] group-hover:border-[var(--ring)]'
-                    }`}>
-                      {st.name.replace(' Station', '').replace(' Research', '')}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {/* Real Polar Stereographic SVG Map */}
+          <PolarStereographicMap
+            stations={filteredStations}
+            selectedStationId={selectedStationId}
+            onSelectStation={setSelectedStationId}
+          />
 
           {/* Station Quick Selector Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4">
@@ -329,16 +436,16 @@ export const StationCommandHUD: React.FC<StationCommandHUDProps> = ({
             </div>
 
             {/* Quick Actions Footer */}
-            <div className="border-t border-[var(--border)] pt-4 mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="border-t border-[var(--border)] pt-4 mt-4 flex items-center justify-between">
               <div className="text-[11px] font-mono text-[var(--muted-foreground)] flex items-center">
-                <Clock className="w-3.5 h-3.5 mr-1 text-[var(--signal)] shrink-0" />
+                <Clock className="w-3.5 h-3.5 mr-1 text-[var(--signal)]" />
                 <span>Last Telemetry Sync: Just now</span>
               </div>
 
               {onSelectExpeditionByProgramme && (
                 <button
                   onClick={() => onSelectExpeditionByProgramme(selectedStation.programme)}
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--deep)] active:bg-[var(--deep)] text-[var(--primary-foreground)] font-mono text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer min-h-[40px]"
+                  className="px-4 py-2 rounded-lg bg-[var(--primary)] hover:bg-[var(--deep)] text-[var(--primary-foreground)] font-mono text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
                 >
                   <span>Explore {selectedStation.programme} Voyages</span>
                   <ArrowUpRight className="w-3.5 h-3.5" />

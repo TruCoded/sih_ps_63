@@ -16,10 +16,14 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Path to seed data (try internal bundled directory first for serverless, then fallback to infra/seed)
-const internalSeedPath = path.resolve(__dirname, '../data/seed-data.json');
-const infraSeedPath = path.resolve(__dirname, '../../../../infra/seed/seed-data.json');
-const seedPath = fs.existsSync(internalSeedPath) ? internalSeedPath : infraSeedPath;
+// Robust seed path — works locally (monorepo) and on cloud (Render/Railway)
+const SEED_CANDIDATES = [
+  path.resolve(__dirname, '../../../../infra/seed/seed-data.json'), // local monorepo
+  path.resolve(__dirname, '../../../infra/seed/seed-data.json'),    // alt depth
+  path.resolve(process.cwd(), 'infra/seed/seed-data.json'),         // cwd-relative
+  path.resolve(__dirname, '../seed-data.json'),                      // bundled alongside dist
+];
+const seedPath = SEED_CANDIDATES.find(p => fs.existsSync(p)) || SEED_CANDIDATES[0];
 
 class DataStore {
   private stations: StationTelemetry[] = [];
@@ -42,7 +46,7 @@ class DataStore {
         this.assets = data.assets || [];
         this.auditEvents = data.auditEvents || [];
         this.contentDrafts = data.contentDrafts || [];
-        console.log(`[Store] Seed data successfully loaded from ${seedPath}: ${this.stations.length} stations, ${this.expeditions.length} expeditions, ${this.assets.length} assets.`);
+        console.log(`[Store] Seed data successfully loaded: ${this.stations.length} stations, ${this.expeditions.length} expeditions, ${this.assets.length} assets.`);
       } else {
         console.warn(`[Store] Seed file not found at ${seedPath}. Initializing empty store.`);
       }

@@ -32,15 +32,15 @@ export const SmartEducationHub: React.FC = () => {
   const [tutorLoading, setTutorLoading] = useState(false);
   const [tutorSpeechActive, setTutorSpeechActive] = useState(false);
   const [tutorResponse, setTutorResponse] = useState<any>({
-    response: "🐧 Namaste young explorer! I am Dr. Penguin, your AI Polar Mentor powered by live Groq LLMs! Did you know Antarctica is not just the coldest place on Earth, but also the windiest and driest desert? Ask me ANY question about glaciers, penguins, auroras, or India's brave scientists at Maitri and Bharati, and I will answer you live!",
-    keyConcepts: ["Polar Desert", "Maitri & Bharati", "Extreme Temperatures", "Live Groq AI"],
+    response: "🐧 Namaste young explorer! I am Dr. Penguin, your AI Polar Mentor. Did you know Antarctica is not just the coldest place on Earth, but also the windiest and driest desert? Ask me ANY question about glaciers, penguins, auroras, or India's brave scientists at Maitri and Bharati, and I will answer you!",
+    keyConcepts: ["Polar Desert", "Maitri & Bharati", "Extreme Temperatures", "Cryosphere Science"],
     suggestedQuestions: [
       "Why is glacier ice blue?",
       "How do emperor penguins survive -50°C?",
       "How does Antarctic ice control the Indian monsoon?",
       "What do scientists at Bharati station do during 6 months of dark winter?"
     ],
-    modelUsed: "Groq (openai/gpt-oss-120b Live LLM)"
+    modelUsed: "PolarConnect AI"
   });
 
   // Quiz State
@@ -143,31 +143,7 @@ export const SmartEducationHub: React.FC = () => {
         ]);
       }
     } catch (e) {
-      console.warn('Tutor API unavailable, generating local mentor response:', e);
-      let answer = "";
-      const q = cleanQ.toLowerCase();
-      if (q.includes('penguin') || q.includes('feet') || q.includes('cold')) {
-        answer = tutorLevel === 'kid' 
-          ? "🐧 Emperor penguins have magic built-in blood warmers! Their warm blood going down warms up the cold blood coming back from their feet, so their toes never freeze on the ice!"
-          : "Emperor penguins utilize counter-current heat exchange vascular systems in their femoral extremities. Arterial blood transfers heat to adjacent venous channels before reaching the sub-zero ground surface, preventing hypothermic shock.";
-      } else if (q.includes('ice') || q.includes('core') || q.includes('drill')) {
-        answer = tutorLevel === 'kid'
-          ? "🧊 Glacial ice traps ancient bubbles of air from thousands of years ago! When Indian scientists drill ice cores, they are opening a time capsule of Earth's ancient atmosphere!"
-          : "Polar ice sheets archive atmospheric composition through firn densification. Ice cores drilled at Amery and Schirmacher Oasis yield high-resolution isotopic paleoclimate records spanning millennia.";
-      } else {
-        answer = `🐧 Dr. Penguin here! Regarding "${cleanQ}": Polar regions are Earth's natural climate stabilizers. India's stations (Maitri, Bharati, Himadri, and Himansh) continuously observe atmospheric, oceanic, and glaciological changes to help us protect our planet!`;
-      }
-      setTutorResponse({
-        question: cleanQ,
-        response: answer,
-        level: tutorLevel,
-        modelUsed: 'Dr. Penguin Polar Mentor (Local Knowledge)',
-        followUpQuestions: [
-          'How do scientists drill ice cores in Antarctica?',
-          'What is the difference between Arctic and Antarctic ice?',
-          'Why does India study the polar regions?'
-        ]
-      });
+      console.error('Tutor ask failed:', e);
     } finally {
       setTutorLoading(false);
     }
@@ -293,9 +269,9 @@ export const SmartEducationHub: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Main Tutor Dialogue Box */}
           <div className="lg:col-span-8 bg-[var(--card)] rounded-2xl p-6 sm:p-8 border border-emerald-500/30 space-y-6 shadow-xs">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[var(--border)] pb-4">
+            <div className="flex items-center justify-between border-b border-[var(--border)] pb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-2xl bg-[var(--secondary)] border border-[var(--border)] flex items-center justify-center text-2xl shadow-xs shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-[var(--secondary)] border border-[var(--border)] flex items-center justify-center text-2xl shadow-xs">
                   🐧
                 </div>
                 <div>
@@ -305,7 +281,7 @@ export const SmartEducationHub: React.FC = () => {
               </div>
 
               {/* Learning Level Selector */}
-              <div className="flex items-center space-x-1 bg-[var(--secondary)] p-1 rounded-full border border-[var(--border)] text-[11px] font-mono self-start sm:self-auto">
+              <div className="flex items-center space-x-1 bg-[var(--secondary)] p-1 rounded-full border border-[var(--border)] text-[11px] font-mono">
                 {[
                   { id: 'kid', label: 'Age 8-12' },
                   { id: 'high_school', label: 'High School' },
@@ -335,9 +311,9 @@ export const SmartEducationHub: React.FC = () => {
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider">Dr. Penguin is Consulting Live LLM...</h4>
+                      <h4 className="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider">Dr. Penguin is preparing your answer…</h4>
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--card)] text-emerald-700 border border-emerald-500/30 animate-pulse font-bold">
-                        Groq 120B Live
+                        PolarConnect AI
                       </span>
                     </div>
                     <p className="text-[11px] text-[var(--muted-foreground)] mt-0.5">
@@ -372,7 +348,7 @@ export const SmartEducationHub: React.FC = () => {
                     <span>Mentor Explanation ({tutorLevel.toUpperCase()})</span>
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[var(--card)] text-emerald-700 border border-emerald-500/30 flex items-center space-x-1 font-semibold">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block mr-1" />
-                      {tutorResponse.modelUsed || 'Groq (openai/gpt-oss-120b Live LLM)'}
+                      PolarConnect AI
                     </span>
                   </span>
                   <button
@@ -490,7 +466,7 @@ export const SmartEducationHub: React.FC = () => {
                           response: item.answer,
                           keyConcepts: ["Session History", item.level],
                           suggestedQuestions: tutorResponse.suggestedQuestions,
-                          modelUsed: item.model || 'Groq (openai/gpt-oss-120b Live LLM)'
+                          modelUsed: item.model || 'PolarConnect AI'
                         });
                       }}
                       className="w-full text-left p-2.5 rounded-[var(--radius)] bg-[var(--secondary)]/40 hover:bg-[var(--secondary)] border border-[var(--border)] text-xs text-[var(--foreground)] transition-all flex items-center justify-between group cursor-pointer"

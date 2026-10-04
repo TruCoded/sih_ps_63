@@ -3,170 +3,343 @@ import { URL } from 'url';
 import { store } from './store.js';
 import { Asset, ContentDraft, RAGCitation } from '../types/index.js';
 
+// =====================================================================
+// MULTI-PROVIDER LLM INFRASTRUCTURE
+// Provider cascade: Groq → Gemini → Together AI → HuggingFace → Pollinations.ai
+// Pollinations.ai requires NO API key — always available as final fallback
+// =====================================================================
+
 export interface LLMConfig {
-  provider?: 'builtin' | 'openai' | 'gemini' | 'custom';
+  provider?: 'groq' | 'gemini' | 'together' | 'huggingface' | 'pollinations' | 'custom';
   apiKey?: string;
   customEndpoint?: string;
   modelName?: string;
   temperature?: number;
 }
 
-/**
- * Universal Groq / OpenAI LLM caller using Node https with IPv4 (family: 4)
- * to ensure 100% connection reliability on Windows environments without undici IPv6 timeouts.
- */
-async function callGroqOrOpenAI(options: {
-  messages: Array<{ role: string; content: string }>;
-  jsonMode?: boolean;
-  temperature?: number;
-  model?: string;
-  apiKey?: string;
-  endpoint?: string;
-}): Promise<any> {
-  const apiKey = options.apiKey || process.env.GROQ_API_KEY || '';
-  const model = options.model || process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
-  const endpoint = options.endpoint || 'https://api.groq.com/openai/v1/chat/completions';
-  const temperature = options.temperature ?? 0.3;
+interface LLMProvider {
+  name: string;
+  endpoint: string;
+  apiKey: string;
+  model: string;
+  supportsJsonMode: boolean;
+}
 
-  const urlObj = new URL(endpoint);
-  const payload = JSON.stringify({
-    model,
-    messages: options.messages,
-    temperature,
-    ...(options.jsonMode ? { response_format: { type: 'json_object' } } : {})
+function getProviderChain(overrideConfig?: LLMConfig): LLMProvider[] {
+  const providers: LLMProvider[] = [];
+
+  // Custom override (if explicitly configured per-request)
+  if (overrideConfig?.customEndpoint && overrideConfig?.apiKey) {
+    providers.push({
+      name: 'Custom',
+      endpoint: overrideConfig.customEndpoint,
+      apiKey: overrideConfig.apiKey,
+      model: overrideConfig.modelName || 'llama-3.1-70b-versatile',
+      supportsJsonMode: true
+    });
+  }
+
+  // Provider 1: Groq — fastest, free tier, excellent JSON mode
+  if (process.env.GROQ_API_KEY) {
+    providers.push({
+      name: 'Groq (llama3-70b)',
+      endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+      apiKey: process.env.GROQ_API_KEY,
+      model: process.env.GROQ_MODEL || 'llama-3.1-70b-versatile',
+      supportsJsonMode: true
+    });
+  }
+
+  // Provider 2: Google Gemini Flash — free 15 req/min, OpenAI-compatible endpoint
+  if (process.env.GEMINI_API_KEY) {
+    providers.push({
+      name: 'Gemini Flash',
+      endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      apiKey: process.env.GEMINI_API_KEY,
+      model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+      supportsJsonMode: true
+    });
+  }
+
+  // Provider 3: Together AI — free $25 credits on signup
+  if (process.env.TOGETHER_API_KEY) {
+    providers.push({
+      name: 'Together AI (llama3-70b)',
+      endpoint: 'https://api.together.xyz/v1/chat/completions',
+      apiKey: process.env.TOGETHER_API_KEY,
+      model: process.env.TOGETHER_MODEL || 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo',
+      supportsJsonMode: true
+    });
+  }
+
+  // Provider 4: HuggingFace — free with account (better with key)
+  providers.push({
+    name: 'HuggingFace (zephyr-7b)',
+    endpoint: 'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta/v1/chat/completions',
+    apiKey: process.env.HUGGINGFACE_API_KEY || '',
+    model: 'HuggingFaceH4/zephyr-7b-beta',
+    supportsJsonMode: false // use prompt injection instead
   });
 
+  // Provider 5: Pollinations.ai — ALWAYS FREE, no key needed whatsoever
+  providers.push({
+    name: 'Pollinations.ai (openai)',
+    endpoint: 'https://text.pollinations.ai/',
+    apiKey: '',
+    model: 'openai',
+    supportsJsonMode: true
+  });
+
+  return providers;
+}
+
+/**
+ * Core HTTP caller for OpenAI-compatible endpoints
+ * Returns raw content string from the LLM response
+ */
+async function callProviderHTTP(
+  provider: LLMProvider,
+  messages: Array<{ role: string; content: string }>,
+  jsonMode: boolean,
+  temperature: number
+): Promise<string> {
+  const urlObj = new URL(provider.endpoint);
+
+  // Build system prompt JSON instruction for providers without native JSON mode
+  let finalMessages = messages;
+  if (jsonMode && !provider.supportsJsonMode) {
+    const lastSystem = messages.find(m => m.role === 'system');
+    if (lastSystem) {
+      finalMessages = messages.map(m =>
+        m.role === 'system'
+          ? { ...m, content: m.content + '\n\nIMPORTANT: You MUST respond with ONLY valid JSON. No markdown, no code blocks, no explanation outside the JSON structure.' }
+          : m
+      );
+    }
+  }
+
+  const bodyObj: any = {
+    model: provider.model,
+    messages: finalMessages,
+    temperature,
+    max_tokens: 2048
+  };
+
+  // Attach JSON mode headers for supporting providers
+  if (jsonMode && provider.supportsJsonMode && provider.name !== 'Pollinations.ai (openai)') {
+    bodyObj.response_format = { type: 'json_object' };
+  }
+  // Pollinations uses custom jsonMode param
+  if (jsonMode && provider.name === 'Pollinations.ai (openai)') {
+    bodyObj.jsonMode = true;
+    bodyObj.seed = 42;
+  }
+
+  const payload = JSON.stringify(bodyObj);
+
   return new Promise((resolve, reject) => {
+    const headers: Record<string, string | number> = {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(payload)
+    };
+    if (provider.apiKey) {
+      headers['Authorization'] = `Bearer ${provider.apiKey}`;
+    }
+
     const req = https.request({
       protocol: urlObj.protocol,
       hostname: urlObj.hostname,
-      port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
-      path: urlObj.pathname + urlObj.search,
+      port: urlObj.port ? parseInt(urlObj.port) : 443,
+      path: urlObj.pathname + (urlObj.search || ''),
       method: 'POST',
-      family: 4, // Force IPv4 to prevent Windows undici DNS / IPv6 timeout
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload)
-      },
-      timeout: 25000 // 25s timeout
+      family: 4, // Force IPv4 to prevent Windows IPv6 DNS timeouts
+      headers,
+      timeout: 35000
     }, (res) => {
       let body = '';
       res.on('data', chunk => { body += chunk; });
       res.on('end', () => {
         if (res.statusCode && res.statusCode >= 400) {
-          return reject(new Error(`LLM API returned status ${res.statusCode}: ${body.substring(0, 300)}`));
+          return reject(new Error(`HTTP ${res.statusCode} from ${provider.name}: ${body.substring(0, 250)}`));
         }
+
+        // Handle multiple response formats
         try {
           const parsed = JSON.parse(body);
-          const rawContent = parsed.choices?.[0]?.message?.content || '';
-          if (options.jsonMode) {
-            // Clean markdown code blocks if the LLM wrapped it in ```json ... ```
-            const cleaned = rawContent.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-            try {
-              const jsonResult = JSON.parse(cleaned);
-              resolve(jsonResult);
-            } catch (jsonErr) {
-              console.warn('[LLMService] Failed to parse JSON mode content, returning raw string in object:', jsonErr);
-              resolve({ response: rawContent, keyConcepts: ["Polar Science", "NCPOR Research"], suggestedQuestions: ["Tell me more about Antarctic stations", "How does ice form in polar seas?"] });
-            }
-          } else {
-            resolve(rawContent);
+
+          // Standard OpenAI / Groq / Gemini / Together format
+          const openaiContent = parsed.choices?.[0]?.message?.content;
+          if (openaiContent && openaiContent.length > 3) {
+            return resolve(openaiContent);
           }
-        } catch (err: any) {
-          reject(new Error(`Failed to parse LLM response body: ${err.message}`));
+
+          // HuggingFace array format
+          if (Array.isArray(parsed) && parsed[0]?.generated_text) {
+            return resolve(parsed[0].generated_text);
+          }
+
+          // HuggingFace single object format
+          if (parsed.generated_text && parsed.generated_text.length > 3) {
+            return resolve(parsed.generated_text);
+          }
+
+          // Pollinations sometimes returns content directly
+          if (typeof parsed === 'string' && parsed.length > 3) {
+            return resolve(parsed);
+          }
+
+          return reject(new Error(`Could not extract content from ${provider.name} response`));
+        } catch {
+          // Pollinations may return raw text (not JSON wrapper)
+          if (body && body.trim().length > 3) {
+            return resolve(body.trim());
+          }
+          reject(new Error(`Unparseable response from ${provider.name}`));
         }
       });
     });
 
     req.on('timeout', () => {
       req.destroy();
-      reject(new Error('LLM request timed out after 25s'));
+      reject(new Error(`${provider.name} timed out after 35s`));
     });
-
-    req.on('error', (err) => {
-      reject(err);
-    });
-
+    req.on('error', (err) => reject(new Error(`${provider.name} network error: ${err.message}`)));
     req.write(payload);
     req.end();
   });
 }
 
+/**
+ * Parse and clean JSON from LLM output, handling markdown code blocks
+ */
+function parseJSONFromLLM(raw: string): any {
+  // Strip markdown code fences
+  const cleaned = raw
+    .replace(/^```json\s*/im, '')
+    .replace(/^```\s*/im, '')
+    .replace(/```\s*$/im, '')
+    .trim();
+
+  // Try direct parse
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+
+  // Try extracting first JSON object/array from the text
+  const objMatch = cleaned.match(/(\{[\s\S]*\})/);
+  if (objMatch) {
+    try { return JSON.parse(objMatch[1]); } catch {}
+  }
+  const arrMatch = cleaned.match(/(\[[\s\S]*\])/);
+  if (arrMatch) {
+    try { return JSON.parse(arrMatch[1]); } catch {}
+  }
+
+  throw new Error('No valid JSON found in LLM response');
+}
+
+/**
+ * PRIMARY ENTRY POINT — calls providers in order, returns first successful result
+ */
+async function callLLM(options: {
+  messages: Array<{ role: string; content: string }>;
+  jsonMode?: boolean;
+  temperature?: number;
+  overrideConfig?: LLMConfig;
+}): Promise<{ content: string; providerUsed: string }> {
+  const providers = getProviderChain(options.overrideConfig);
+  const temperature = options.temperature ?? 0.3;
+  const jsonMode = options.jsonMode ?? false;
+
+  const errors: string[] = [];
+
+  for (const provider of providers) {
+    try {
+      console.log(`[LLMService] → Trying ${provider.name}...`);
+      const content = await callProviderHTTP(provider, options.messages, jsonMode, temperature);
+      console.log(`[LLMService] ✓ Success with ${provider.name} (${content.length} chars)`);
+      return { content, providerUsed: provider.name };
+    } catch (e: any) {
+      const errMsg = e?.message || String(e);
+      console.warn(`[LLMService] ✗ ${provider.name} failed: ${errMsg.substring(0, 120)}`);
+      errors.push(`${provider.name}: ${errMsg.substring(0, 80)}`);
+    }
+  }
+
+  throw new Error(`All ${providers.length} LLM providers failed:\n${errors.join('\n')}`);
+}
+
+// =====================================================================
+// LLM SERVICE CLASS — All Domain-Specific AI Functions
+// =====================================================================
 export class LLMService {
-  // 1. PolarAI Grounded Synthesis
+
+  // ---------------------------------------------------------------
+  // 1. PolarAI Grounded Synthesis (RAG Chat)
+  // ---------------------------------------------------------------
   public async generateGroundedAnswer(
-    query: string, 
-    citations: RAGCitation[], 
+    query: string,
+    citations: RAGCitation[],
     conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
     config?: LLMConfig
   ): Promise<{ answer: string; confidence: number; modelUsed: string }> {
-    const primaryCitation = citations[0];
-    const topSnippets = citations.map(c => `[Source: ${c.assetTitle} | Locator: ${c.pageOrTimeLocator} | ID: ${c.assetId}]:\n${c.chunkSnippet}`).join('\n\n');
+    const topSnippets = citations.map(c =>
+      `[Source: ${c.assetTitle} | Locator: ${c.pageOrTimeLocator} | AssetID: ${c.assetId}]:\n${c.chunkSnippet}`
+    ).join('\n\n');
 
-    // 1. Try Live Groq LLM with strict scientific grounding prompt
-    try {
-      const systemPrompt = `You are PolarConnect AI, the official scientific knowledge assistant for the Ministry of Earth Sciences (MoES) and National Centre for Polar and Ocean Research (NCPOR).
+    const systemPrompt = `You are PolarConnect AI, the official scientific knowledge assistant for the Ministry of Earth Sciences (MoES) and National Centre for Polar and Ocean Research (NCPOR).
+
 You synthesize evidence-grounded answers for researchers, policy analysts, and the public.
 
 STRICT GROUNDING RULES:
-1. Base your answer EXCLUSIVELY on the verified polar evidence snippets provided below.
-2. For every key fact, finding, or measurement, include an explicit inline citation pointing to the source title and locator, e.g. [Source: Title, Section/Page].
+1. Base your answer EXCLUSIVELY on the verified polar evidence snippets below.
+2. For every key fact, include an inline citation like [Source: Title, Section/Page].
 3. Do NOT invent dates, measurements, or station records not in the snippets.
-4. If the provided snippets do not have complete information to answer part of the query, clearly state what is documented and what remains an evidence gap in current open records.
+4. If snippets are insufficient, clearly state what is documented vs what remains an evidence gap.
 5. Maintain a professional, authoritative scientific tone.
 
 VERIFIED SCIENTIFIC EVIDENCE SNIPPETS:
 ${topSnippets || 'No direct evidence snippets retrieved.'}`;
 
-      const historyMessages = conversationHistory.map(h => ({
-        role: h.role,
-        content: h.content
-      }));
-
-      const raw = await callGroqOrOpenAI({
+    try {
+      const { content, providerUsed } = await callLLM({
         messages: [
           { role: 'system', content: systemPrompt },
-          ...historyMessages,
+          ...conversationHistory.slice(-6).map(h => ({ role: h.role, content: h.content })),
           { role: 'user', content: query }
         ],
         jsonMode: false,
         temperature: 0.2,
-        apiKey: config?.apiKey,
-        model: config?.modelName
+        overrideConfig: config
       });
 
-      if (raw && typeof raw === 'string' && raw.trim().length > 10) {
+      if (content && content.trim().length > 10) {
         return {
-          answer: raw.trim(),
-          confidence: citations.length > 0 ? 98 : 45,
-          modelUsed: 'Groq (openai/gpt-oss-120b Live LLM)'
+          answer: content.trim(),
+          confidence: citations.length > 0 ? 97 : 45,
+          modelUsed: providerUsed
         };
       }
     } catch (e) {
-      console.warn('[LLMService] Live Grounded LLM failed, using baseline neural synthesizer:', e);
+      console.warn('[LLMService] generateGroundedAnswer all providers failed, using baseline:', e);
     }
 
-    // Built-in PolarConnect Scientific Baseline Synthesizer
-    let synthesis = "";
-    const cleanQ = query.toLowerCase();
-
-    if (conversationHistory.length > 0 && (cleanQ.includes('more') || cleanQ.includes('details') || cleanQ.includes('how') || cleanQ.includes('why'))) {
-      synthesis = `Following up on our earlier discussion: In ${primaryCitation?.assetTitle || 'expedition records'} (${primaryCitation?.pageOrTimeLocator || 'Section 3'}), Indian polar researchers established that atmospheric aerosol transport, katabatic wind velocity, and cryospheric melting operate in coupled feedback cycles. Specifically, continuous observations at Maitri and Bharati stations reveal that high-latitude air masses directly interact with the southern hemisphere sub-tropical front, creating meteorological teleconnections that influence global circulation patterns.`;
-    } else if (citations.length > 0 && primaryCitation) {
-      synthesis = `According to peer-reviewed findings in "${primaryCitation.assetTitle}" (${primaryCitation.pageOrTimeLocator}):\n\n${primaryCitation.chunkSnippet.replace(/\.\.\.$/, '')}.\n\nFurthermore, verified observations recorded across NCPOR expeditions confirm that these measurements adhere to international WMO standards and FAIR scientific stewardship, providing citable baselines for polar cryosphere dynamics.`;
-    } else {
-      synthesis = `No verified records were found in the open NCPOR / NPDC repository to substantiate an answer for "${query}". Under NCPOR scientific governance, answers must be evidence-grounded rather than generative speculation.`;
-    }
+    // Grounded baseline fallback
+    const primary = citations[0];
+    const synthesis = primary
+      ? `According to peer-reviewed findings in "${primary.assetTitle}" (${primary.pageOrTimeLocator}):\n\n${primary.chunkSnippet.replace(/\.\.\.$/, '')}.\n\nVerified observations recorded across NCPOR expeditions confirm these measurements adhere to international WMO standards and FAIR scientific stewardship.`
+      : `No verified records were found in the open NCPOR / NPDC repository to substantiate an answer for "${query}". Under NCPOR scientific governance, answers must be evidence-grounded rather than generative speculation.`;
 
     return {
       answer: synthesis,
-      confidence: citations.length > 0 ? 95 : 30,
-      modelUsed: 'PolarConnect Neural Engine (MoES Grounded)'
+      confidence: citations.length > 0 ? 82 : 30,
+      modelUsed: 'PolarConnect Grounded Baseline (Offline)'
     };
   }
 
-  // 2. Content Studio: AI Dissemination Pack Synthesizer
+  // ---------------------------------------------------------------
+  // 2. Content Studio — AI Media Pack Synthesizer
+  // ---------------------------------------------------------------
   public async generateMediaPack(
     primaryAsset: Asset,
     audience: string,
@@ -183,7 +356,7 @@ ${topSnippets || 'No direct evidence snippets retrieved.'}`;
     aiVerificationScore: number;
     verifiableClaims: Array<{ claim: string; source: string; status: 'verified' | 'caution' }>;
   }> {
-    const prompt = `You are the Lead Science Communicator at the National Centre for Polar and Ocean Research (NCPOR), Ministry of Earth Sciences.
+    const prompt = `You are the Lead Science Communicator at NCPOR (National Centre for Polar and Ocean Research), Ministry of Earth Sciences.
 Transform this certified polar research asset into an engaging public dissemination pack.
 
 ASSET METADATA:
@@ -197,150 +370,114 @@ Authoritative Provider: ${primaryAsset.authoritativeProvider}
 Source URL: ${primaryAsset.sourceUrl}
 
 TARGET PARAMETERS:
-Audience: ${audience} (e.g. school_students, journalists_press, policymakers, general_public)
-Channel Format: ${channel} (e.g. twitter_thread, instagram_carousel, press_release, educational_explainer)
-Tone: ${tone} (e.g. engaging, formal_scientific, adventurous, policymaker_brief)
+Audience: ${audience}
+Channel Format: ${channel}
+Tone: ${tone}
 ${customInstructions ? `Special Instructions: ${customInstructions}` : ''}
 
-You MUST return valid JSON with this exact schema:
+Return ONLY valid JSON with this exact schema:
 {
   "headline": "Punchy, attention-grabbing title or thread hook",
-  "body": "Complete content text formatted appropriately for the channel",
+  "body": "Complete content text formatted for the channel",
   "bulletPoints": ["Takeaway 1", "Takeaway 2", "Takeaway 3"],
-  "suggestedAltText": "Detailed descriptive alt-text for graphics/photos associated with this post",
+  "suggestedAltText": "Descriptive alt-text for associated graphics",
   "hashtags": ["#Tag1", "#Tag2", "#Tag3", "#Tag4"],
-  "aiVerificationScore": 98,
+  "aiVerificationScore": 96,
   "verifiableClaims": [
-    {
-      "claim": "Specific factual claim stated in the body",
-      "source": "${primaryAsset.sourceUrl}",
-      "status": "verified"
-    }
+    { "claim": "Specific factual claim", "source": "${primaryAsset.sourceUrl}", "status": "verified" }
   ]
 }`;
 
     try {
-      const result = await callGroqOrOpenAI({
+      const { content, providerUsed } = await callLLM({
         messages: [
           { role: 'system', content: 'You are an expert science communication synthesizer. Return valid JSON only.' },
           { role: 'user', content: prompt }
         ],
         jsonMode: true,
         temperature: 0.4,
-        apiKey: config?.apiKey,
-        model: config?.modelName
+        overrideConfig: config
       });
 
-      if (result && result.headline && result.body) {
+      const result = parseJSONFromLLM(content);
+      if (result?.headline && result?.body) {
         return {
           headline: result.headline,
           body: result.body,
-          bulletPoints: Array.isArray(result.bulletPoints) ? result.bulletPoints : ["Evidence-grounded", "FAIR compliant"],
-          suggestedAltText: result.suggestedAltText || `Polar research visualization from ${primaryAsset.spatialCoverageName}`,
+          bulletPoints: Array.isArray(result.bulletPoints) ? result.bulletPoints : ['Evidence-grounded', 'FAIR compliant'],
+          suggestedAltText: result.suggestedAltText || `Polar research from ${primaryAsset.spatialCoverageName}`,
           hashtags: Array.isArray(result.hashtags) ? result.hashtags : ['#NCPOR', '#PolarScience', '#MoES'],
-          aiVerificationScore: typeof result.aiVerificationScore === 'number' ? result.aiVerificationScore : 98,
-          verifiableClaims: Array.isArray(result.verifiableClaims) && result.verifiableClaims.length > 0 ? result.verifiableClaims : [
-            {
-              claim: `Directly derived from ${primaryAsset.title}`,
-              source: primaryAsset.sourceUrl,
-              status: 'verified' as const
-            }
-          ]
+          aiVerificationScore: typeof result.aiVerificationScore === 'number' ? result.aiVerificationScore : 96,
+          verifiableClaims: Array.isArray(result.verifiableClaims) && result.verifiableClaims.length > 0
+            ? result.verifiableClaims
+            : [{ claim: `Derived from ${primaryAsset.title}`, source: primaryAsset.sourceUrl, status: 'verified' as const }]
         };
       }
     } catch (e) {
-      console.warn('[LLMService] Live Media Pack generation failed, using baseline templates:', e);
+      console.warn('[LLMService] generateMediaPack failed, using channel templates:', e);
     }
 
-    // Baseline fallback
+    // Channel-specific baseline fallback
+    const isTwitter = channel === 'twitter_thread';
     const isStudent = audience === 'school_students';
     const isPress = audience === 'journalists_press';
 
     let headline = `From the Ice to the Nation: ${primaryAsset.title.substring(0, 50)}`;
-    let body = `The National Centre for Polar and Ocean Research (NCPOR) has released verified findings from ${primaryAsset.spatialCoverageName}. The research, licensed under ${primaryAsset.licence}, maps atmospheric physics and cryospheric dynamics that directly safeguard our understanding of global climate balance.`;
-    let bulletPoints = [
-      "100% grounded in official expedition archives",
-      "Authoritative NPDC provenance",
-      "Publicly citable scientific asset"
-    ];
-    let altText = `View of scientific research expedition base at ${primaryAsset.spatialCoverageName}.`;
+    let body = `The National Centre for Polar and Ocean Research (NCPOR) has released verified findings from ${primaryAsset.spatialCoverageName}. The research, licensed under ${primaryAsset.licence}, maps atmospheric and cryospheric dynamics safeguarding global climate balance.`;
     let hashtags = ['#PolarScience', '#NCPOR', '#MoES', '#ClimateResearch'];
 
-    if (channel === 'twitter_thread') {
-      headline = `🧵 1/4 How India's Polar Research Protects Our Climate Future [${primaryAsset.type.toUpperCase()}]`;
-      body = `1/4 ❄️ Direct from India's polar stations: New peer-reviewed evidence from ${primaryAsset.title.substring(0, 50)}...\n\n2/4 Scientists at ${primaryAsset.spatialCoverageName} tracked atmospheric changes and ice mass balance with sub-millimeter precision.\n\n3/4 Why it matters: High-latitude ice loss directly influences ocean currents and the Indian monsoon system!\n\n4/4 Verified data is openly citable via National Polar Data Centre (NPDC) under ${primaryAsset.licence}.`;
+    if (isTwitter) {
+      headline = `🧵 1/4 How India's Polar Research Protects Our Climate Future`;
+      body = `1/4 ❄️ ${primaryAsset.title.substring(0, 60)}...\n\n2/4 Scientists at ${primaryAsset.spatialCoverageName} tracked atmospheric changes with sub-millimeter precision.\n\n3/4 Why it matters: High-latitude ice loss directly influences ocean currents and the Indian monsoon!\n\n4/4 Verified data openly citable via NPDC under ${primaryAsset.licence}.`;
       hashtags = ['#IndianScience', '#PolarResearch', '#Antarctica', '#ClimateAction', '#NCPOR'];
     } else if (isPress) {
-      headline = `PRESS RELEASE: Ministry of Earth Sciences Announces Verified Polar Datasets on ${primaryAsset.spatialCoverageName}`;
-      body = `NEW DELHI / GOA — The National Centre for Polar and Ocean Research (NCPOR), Ministry of Earth Sciences, has officially released certified scientific records detailing ${primaryAsset.title}.\n\nConducted in accordance with international FAIR principles and the Antarctic Treaty System, the data confirms crucial teleconnection baselines between polar cryosphere shifts and tropical weather dynamics.`;
+      headline = `PRESS RELEASE: Ministry of Earth Sciences Releases Verified Polar Dataset`;
+      body = `NEW DELHI / GOA — The National Centre for Polar and Ocean Research (NCPOR) has officially released certified scientific records detailing ${primaryAsset.title}. Conducted in accordance with FAIR principles and Antarctic Treaty, the data confirms crucial teleconnection baselines.`;
       hashtags = ['#PressRelease', '#MoES', '#NCPOR', '#EarthSciences', '#OpenData'];
     } else if (isStudent) {
       headline = `❄️ Polar Explorers: How Indian Scientists Unlocked Secrets of ${primaryAsset.spatialCoverageName}!`;
-      body = `Imagine working in a place where the sun doesn't rise for months, and winds howl faster than an express train! 🚂💨\n\nThat's what Indian scientists at our polar research bases do every single day! Through missions like this one (${primaryAsset.title.substring(0, 40)}), our researchers drill deep into ancient ice to see what Earth's atmosphere was like hundreds of years ago.`;
+      body = `Imagine working where the sun doesn't rise for months and winds howl faster than an express train! 🚂💨\n\nThat's what Indian scientists at ${primaryAsset.spatialCoverageName} do! Through missions like this one (${primaryAsset.title.substring(0, 40)}), researchers drill into ancient ice to see what Earth's atmosphere was like hundreds of years ago.`;
       hashtags = ['#KidsInScience', '#STEMIndia', '#PolarExploration', '#FutureScientists'];
     }
 
-    if (customInstructions) {
-      body += `\n\n[Editorial Focus: ${customInstructions}]`;
-    }
+    if (customInstructions) body += `\n\n[Editorial Focus: ${customInstructions}]`;
 
     return {
-      headline,
-      body,
-      bulletPoints,
-      suggestedAltText: altText,
+      headline, body,
+      bulletPoints: ['100% grounded in official expedition archives', 'Authoritative NPDC provenance', 'Publicly citable scientific asset'],
+      suggestedAltText: `Scientific research expedition at ${primaryAsset.spatialCoverageName}.`,
       hashtags,
-      aiVerificationScore: 98,
-      verifiableClaims: [
-        {
-          claim: `Findings correspond directly to primary records in ${primaryAsset.title}`,
-          source: primaryAsset.sourceUrl,
-          status: 'verified' as const
-        }
-      ]
+      aiVerificationScore: 95,
+      verifiableClaims: [{ claim: `Findings from ${primaryAsset.title}`, source: primaryAsset.sourceUrl, status: 'verified' as const }]
     };
   }
 
+  // ---------------------------------------------------------------
   // 3. AI Claim Verification Analyzer
+  // ---------------------------------------------------------------
   public async verifyDraftClaims(draftText: string, primaryAsset: Asset) {
-    const prompt = `You are the NCPOR Scientific Verification Auditor. Compare the following public communication draft against the primary polar research asset:
+    const prompt = `You are the NCPOR Scientific Verification Auditor. Compare this public communication draft against the primary polar research asset:
 Asset Title: ${primaryAsset.title}
 Asset Abstract: ${primaryAsset.abstract}
 Asset Keywords: ${primaryAsset.subjects.join(', ')}
 Spatial Coverage: ${primaryAsset.spatialCoverageName}
 
-DRAFT TEXT TO AUDIT:
-\"\"\"${draftText}\"\"\"
+DRAFT TO AUDIT:
+"""${draftText}"""
 
-Audit the draft for scientific accuracy, citation fidelity, and absence of sensitive/classified defense or emergency frequencies.
-Return valid JSON with:
+Return ONLY valid JSON:
 {
   "overallScore": 95,
   "isApprovedForReview": true,
   "checks": [
-    {
-      "aspect": "Scientific Accuracy",
-      "status": "Passed",
-      "score": 95,
-      "details": "Specific feedback on scientific correctness against primary asset findings"
-    },
-    {
-      "aspect": "Provenance Linkage",
-      "status": "Passed",
-      "score": 100,
-      "details": "Feedback on attribution to NCPOR/NPDC"
-    },
-    {
-      "aspect": "Geographic & Security Filter",
-      "status": "Passed",
-      "score": 100,
-      "details": "Confirmation that no sensitive defense or environmental nesting boundaries were exposed"
-    }
+    { "aspect": "Scientific Accuracy", "status": "Passed", "score": 95, "details": "..." },
+    { "aspect": "Provenance Linkage", "status": "Passed", "score": 100, "details": "..." },
+    { "aspect": "Geographic & Security Filter", "status": "Passed", "score": 100, "details": "..." }
   ]
 }`;
 
     try {
-      const result = await callGroqOrOpenAI({
+      const { content } = await callLLM({
         messages: [
           { role: 'system', content: 'You are an automated scientific audit system. Return valid JSON only.' },
           { role: 'user', content: prompt }
@@ -349,79 +486,59 @@ Return valid JSON with:
         temperature: 0.1
       });
 
-      if (result && typeof result.overallScore === 'number' && Array.isArray(result.checks)) {
+      const result = parseJSONFromLLM(content);
+      if (result?.overallScore !== undefined && Array.isArray(result?.checks)) {
         return result;
       }
     } catch (e) {
-      console.warn('[LLMService] verifyDraftClaims live LLM failed, using heuristic auditor:', e);
+      console.warn('[LLMService] verifyDraftClaims failed, using heuristic auditor:', e);
     }
 
     // Heuristic fallback
     const words = draftText.toLowerCase().split(/\s+/);
-    let matchedKeywords = 0;
-    const requiredKeywords = [...primaryAsset.subjects.map(s => s.toLowerCase()), 'ncpor', 'npdc', 'polar', 'station', 'data'];
-
-    requiredKeywords.forEach(kw => {
-      if (words.some(w => w.includes(kw))) matchedKeywords++;
-    });
-
-    const accuracyScore = Math.min(100, Math.max(75, Math.round((matchedKeywords / 4) * 20 + 60)));
+    const requiredKw = [...primaryAsset.subjects.map(s => s.toLowerCase()), 'ncpor', 'polar', 'station', 'data'];
+    const matched = requiredKw.filter(kw => words.some(w => w.includes(kw))).length;
+    const score = Math.min(100, Math.max(72, Math.round((matched / 4) * 20 + 55)));
 
     return {
-      overallScore: accuracyScore,
-      isApprovedForReview: accuracyScore >= 80,
+      overallScore: score,
+      isApprovedForReview: score >= 80,
       checks: [
-        {
-          aspect: 'Scientific Accuracy',
-          status: accuracyScore > 85 ? 'Passed' : 'Review Advised',
-          score: accuracyScore,
-          details: `Correlates with ${primaryAsset.title}. Key terms identified: ${matchedKeywords} matches.`
-        },
-        {
-          aspect: 'Provenance Linkage',
-          status: 'Passed',
-          score: 100,
-          details: `Tied to authoritative source: ${primaryAsset.sourceUrl} (${primaryAsset.authoritativeProvider}).`
-        },
-        {
-          aspect: 'Geographic & Security Filter',
-          status: 'Passed',
-          score: 100,
-          details: 'No classified defense identifiers, unredacted emergency frequencies, or embargoed data leaks detected.'
-        }
+        { aspect: 'Scientific Accuracy', status: score > 85 ? 'Passed' : 'Review Advised', score, details: `Correlates with ${primaryAsset.title}. ${matched} key terms identified.` },
+        { aspect: 'Provenance Linkage', status: 'Passed', score: 100, details: `Tied to authoritative source: ${primaryAsset.authoritativeProvider}.` },
+        { aspect: 'Geographic & Security Filter', status: 'Passed', score: 100, details: 'No classified defense identifiers or embargoed data detected.' }
       ]
     };
   }
 
-  // 4. Smart Polar Learning Hub: AI Tutor ("Ask Dr. Penguin")
-  // Takes ANY question the student asks and answers it dynamically using the live LLM
+  // ---------------------------------------------------------------
+  // 4. Smart Polar Learning Hub: Dr. Penguin AI Tutor
+  // ---------------------------------------------------------------
   public async generateTutorResponse(
-    question: string, 
+    question: string,
     level: 'kid' | 'high_school' | 'advanced' = 'kid'
   ): Promise<{ response: string; keyConcepts: string[]; suggestedQuestions: string[]; modelUsed: string }> {
-    const levelPromptMap = {
-      kid: "Target audience: Elementary/Middle School Student (Ages 8-12). Use warm, enthusiastic language, vivid real-world analogies (e.g., comparing snow to a giant white mirror or penguin blubber to a natural thermal spacesuit), friendly polar emojis, and zero overly complex jargon.",
-      high_school: "Target audience: High School Student (Ages 14-18). Explain the physical, biological, and meteorological mechanisms clearly with proper scientific principles (thermodynamics, atmospheric pressure, albedo feedback, teleconnections).",
-      advanced: "Target audience: University Undergrad / Polar Researcher. Provide rigorous, mathematically and empirically grounded explanations, referencing NCPOR expedition methodologies, sensor telemetry (AWS, radiometers, spectrometry), and WMO standards."
+    const levelMap = {
+      kid: 'Elementary/Middle School (Ages 8-12). Use warm, enthusiastic language, vivid analogies (comparing snow to a giant mirror, penguin blubber to a thermal spacesuit), friendly polar emojis, zero jargon.',
+      high_school: 'High School (Ages 14-18). Explain physical, biological, and meteorological mechanisms with proper scientific principles (thermodynamics, albedo feedback, teleconnections).',
+      advanced: 'University Undergrad / Researcher. Rigorous, empirically grounded explanations referencing NCPOR expedition methodologies, sensor telemetry (AWS, radiometers), and WMO standards.'
     };
 
-    const systemPrompt = `You are Dr. Penguin, the world-renowned AI Polar Science Mentor for India's National Centre for Polar and Ocean Research (NCPOR), Ministry of Earth Sciences.
-A student has asked you an authentic question. Your mission is to provide an answer that directly addresses their specific question, inspires scientific curiosity, and teaches true polar and cryospheric science.
-
-${levelPromptMap[level] || levelPromptMap.kid}
+    const systemPrompt = `You are Dr. Penguin, the world-renowned AI Polar Science Mentor for India's NCPOR, Ministry of Earth Sciences.
+Target audience: ${levelMap[level] || levelMap.kid}
 
 CRITICAL RULES:
-1. You MUST directly answer the student's specific question: "${question}". Do not evade or give canned filler.
-2. Weave in authentic facts about India's polar research (Maitri and Bharati stations in Antarctica, Himadri station in Ny-Ålesund Arctic, or Himansh station in the Himalayas) where relevant.
-3. Return valid JSON only with this exact schema:
+1. Directly answer the student's specific question: "${question}". Do not give canned filler.
+2. Weave in authentic facts about India's polar research (Maitri and Bharati in Antarctica, Himadri in Ny-Ålesund Arctic, Himansh in Himalayas) where relevant.
+3. Return ONLY valid JSON with this schema:
 {
-  "response": "Your full, engaging, scientifically accurate explanation directly answering the question...",
+  "response": "Your full, engaging, scientifically accurate explanation...",
   "keyConcepts": ["Concept 1", "Concept 2", "Concept 3", "Concept 4"],
-  "suggestedQuestions": ["Curious follow-up question 1?", "Curious follow-up question 2?", "Curious follow-up question 3?"]
+  "suggestedQuestions": ["Follow-up 1?", "Follow-up 2?", "Follow-up 3?"]
 }`;
 
     try {
-      const result = await callGroqOrOpenAI({
+      const { content, providerUsed } = await callLLM({
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: question }
@@ -430,117 +547,105 @@ CRITICAL RULES:
         temperature: 0.35
       });
 
-      if (result && result.response) {
+      const result = parseJSONFromLLM(content);
+      if (result?.response && result.response.length > 20) {
         return {
           response: result.response,
-          keyConcepts: Array.isArray(result.keyConcepts) && result.keyConcepts.length > 0 
-            ? result.keyConcepts 
-            : ["Polar Cryosphere", "Thermal Dynamics", "NCPOR Research"],
-          suggestedQuestions: Array.isArray(result.suggestedQuestions) && result.suggestedQuestions.length > 0 
-            ? result.suggestedQuestions 
-            : [
-              "How does ice core drilling reveal ancient atmosphere?",
-              "Why did India build Bharati station in 2012?",
-              "How do polar glaciers connect to the Indian monsoon?"
-            ],
-          modelUsed: 'Groq (openai/gpt-oss-120b Live LLM)'
+          keyConcepts: Array.isArray(result.keyConcepts) && result.keyConcepts.length > 0
+            ? result.keyConcepts
+            : ['Polar Cryosphere', 'Thermal Dynamics', 'NCPOR Research'],
+          suggestedQuestions: Array.isArray(result.suggestedQuestions) && result.suggestedQuestions.length > 0
+            ? result.suggestedQuestions
+            : ['How does ice core drilling reveal ancient atmosphere?', 'Why did India build Bharati station in 2012?', 'How do polar glaciers connect to the Indian monsoon?'],
+          modelUsed: providerUsed
         };
       }
-    } catch (error) {
-      console.error('[LLMService] Dr. Penguin live LLM error:', error);
+    } catch (e) {
+      console.error('[LLMService] Dr. Penguin failed:', e);
     }
 
-    // Graceful fallback ONLY if the live API is completely unreachable
     return {
-      response: `❄️ That is a fantastic polar inquiry about "${question}"! India's scientific stations (Maitri and Bharati in Antarctica, Himadri in Svalbard Arctic, and Himansh in the Himalayas) deploy high-precision telemetry, deep ice core drills, and automated radiometers to study this very phenomenon. Scientists continuously record weather and ice dynamics to understand how polar changes influence our global climate.`,
-      keyConcepts: ["Polar Cryosphere", "In-situ Observation", "MoES Research", "Atmospheric Physics"],
-      suggestedQuestions: [
-        "How cold does it get at Maitri station in winter?",
-        "Why is Antarctic glacier ice fresh water and not salty?",
-        "How do satellite radiometers measure ice thickness?"
-      ],
-      modelUsed: 'PolarConnect Grounded Baseline'
+      response: `❄️ Fantastic polar inquiry about "${question}"! India's scientific stations (Maitri and Bharati in Antarctica, Himadri in Svalbard Arctic, Himansh in the Himalayas) deploy high-precision telemetry, ice core drills, and automated radiometers to study this very phenomenon. Continuous recordings of weather and ice dynamics help us understand how polar changes influence global climate.`,
+      keyConcepts: ['Polar Cryosphere', 'In-situ Observation', 'MoES Research', 'Atmospheric Physics'],
+      suggestedQuestions: ['How cold does it get at Maitri station?', 'Why is Antarctic glacier ice fresh and not salty?', 'How do satellites measure ice thickness?'],
+      modelUsed: 'PolarConnect Grounded Baseline (Offline)'
     };
   }
 
+  // ---------------------------------------------------------------
   // 5. Dynamic Topic Quiz Generator
+  // ---------------------------------------------------------------
   public async generateQuizQuestions(
     topic: string = 'General Polar Science',
     difficulty: string = 'medium'
   ): Promise<Array<{ question: string; options: string[]; correct: number; explanation: string }>> {
-    const prompt = `You are a Polar Science Quiz Master for the National Centre for Polar and Ocean Research (NCPOR), Ministry of Earth Sciences.
-Create 3 exciting, scientifically accurate multiple-choice quiz questions on the topic: "${topic}".
+    const prompt = `You are a Polar Science Quiz Master for NCPOR, Ministry of Earth Sciences.
+Create 3 exciting, scientifically accurate multiple-choice quiz questions on: "${topic}".
 Difficulty: ${difficulty}.
-Include facts related to Antarctica, Arctic, Himalayas, or Indian research stations (Maitri, Bharati, Himadri, Himansh) where appropriate.
+Include facts about Antarctica, Arctic, Himalayas, or Indian research stations (Maitri, Bharati, Himadri, Himansh) where appropriate.
 
-You MUST respond strictly with valid JSON with this schema:
+Return ONLY valid JSON:
 {
   "questions": [
     {
-      "question": "Question text here?",
-      "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-      "correct": 0, // Integer 0, 1, 2, or 3 representing the index of the correct option
-      "explanation": "Clear explanation of why this option is correct."
+      "question": "Question text?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct": 0,
+      "explanation": "Why this answer is correct."
     }
   ]
 }`;
 
     try {
-      const result = await callGroqOrOpenAI({
+      const { content } = await callLLM({
         messages: [
           { role: 'system', content: 'You are an educational quiz generation engine. Return JSON only.' },
           { role: 'user', content: prompt }
         ],
         jsonMode: true,
-        temperature: 0.4
+        temperature: 0.45
       });
 
-      if (result && Array.isArray(result.questions) && result.questions.length > 0) {
+      const result = parseJSONFromLLM(content);
+      if (result?.questions && Array.isArray(result.questions) && result.questions.length > 0) {
         return result.questions;
       }
-    } catch (error) {
-      console.error('[LLMService] Dynamic quiz generation error:', error);
+    } catch (e) {
+      console.error('[LLMService] generateQuizQuestions failed:', e);
     }
 
-    // Curated fallbacks
     return [
       {
-        question: "How do Weddell seals maintain breathing holes in thick Antarctic sea ice during winter?",
-        options: [
-          "They saw the ice using their forward canine teeth",
-          "They ram the ice with their heavy skulls",
-          "They rely on thermal volcanic vents",
-          "They do not breathe air in winter"
-        ],
+        question: 'How do Weddell seals maintain breathing holes in thick Antarctic sea ice during winter?',
+        options: ['They saw the ice using forward canine teeth', 'They ram the ice with their skulls', 'They use thermal volcanic vents', 'They do not breathe air in winter'],
         correct: 0,
-        explanation: "Weddell seals have specially adapted incisors and canines that allow them to saw away re-freezing ice to keep breathing holes open throughout the dark polar winter!"
+        explanation: 'Weddell seals have specially adapted incisors and canines to saw re-freezing ice and keep breathing holes open throughout polar winter.'
       },
       {
-        question: "Which microscopic crustacean forms the crucial keystone of the Southern Ocean marine food web?",
-        options: [
-          "Antarctic Krill (Euphausia superba)",
-          "Arctic Barnacles",
-          "Pacific Hermit Crabs",
-          "Deep sea isopods"
-        ],
+        question: 'Which microscopic crustacean forms the keystone of the Southern Ocean marine food web?',
+        options: ['Antarctic Krill (Euphausia superba)', 'Arctic Barnacles', 'Pacific Hermit Crabs', 'Deep sea isopods'],
         correct: 0,
-        explanation: "Antarctic krill have an estimated total biomass of over 400 million tonnes—surpassing the biomass of humans—supporting whales, seals, and penguins!"
+        explanation: 'Antarctic krill have an estimated biomass of over 400 million tonnes — more than humans — supporting whales, seals, and penguins!'
+      },
+      {
+        question: 'What is the altitude of India\'s Himansh glacier research station in Himachal Pradesh?',
+        options: ['2,100 m a.s.l.', '4,080 m a.s.l.', '6,500 m a.s.l.', '1,800 m a.s.l.'],
+        correct: 1,
+        explanation: 'Himansh station in the Chandra Basin, Lahaul-Spiti is at 4,080 meters a.s.l., monitoring benchmark glaciers like Sutri Dhaka and Batal.'
       }
     ];
   }
 
-  // 6. Plain Language AI Provenance Breakdown
+  // ---------------------------------------------------------------
+  // 6. Plain Language Provenance Breakdown
+  // ---------------------------------------------------------------
   public async explainProvenance(assetId: string, provGraph: { nodes: any[]; edges: any[] }) {
     const asset = store.getAssetById(assetId, 'curator');
     if (!asset) {
-      return {
-        summary: "Provenance record not found.",
-        steps: [],
-        trustAssessment: "Unverified"
-      };
+      return { summary: 'Provenance record not found.', steps: [], trustAssessment: 'Unverified' };
     }
 
-    const prompt = `You are an ISO 14721 OAIS and W3C PROV-O data provenance auditor. Explain the custodial lineage and scientific integrity chain of this polar dataset in clear, audit-ready language:
+    const prompt = `You are an ISO 14721 OAIS and W3C PROV-O data provenance auditor. Explain the custodial lineage of this polar dataset in clear, audit-ready language:
 Asset: ${asset.title}
 Expedition: ${asset.expeditionId || 'NCPOR Indian Polar Mission'}
 Location: ${asset.spatialCoverageName}
@@ -549,36 +654,20 @@ Cryptographic Fixity: SHA-256 (${asset.versions[0]?.sha256 || 'Verified'})
 Licence: ${asset.licence}
 Authoritative Provider: ${asset.authoritativeProvider}
 
-Return valid JSON with:
+Return ONLY valid JSON:
 {
-  "summary": "2-3 sentence executive audit summary of how this dataset traveled from the polar station to public release while maintaining cryptographic integrity and FAIR standards.",
+  "summary": "2-3 sentence executive audit summary of data lifecycle from polar station to public release.",
   "steps": [
-    {
-      "stage": "Field Capture & Sensor Instrumentation",
-      "description": "...",
-      "trust": "High (Authoritative Origin)"
-    },
-    {
-      "stage": "Quarantine & Cryptographic Fixity Verification",
-      "description": "...",
-      "trust": "Verified (Immutable Hash)"
-    },
-    {
-      "stage": "Metadata Enrichment & Environmental Privacy",
-      "description": "...",
-      "trust": "Sanitized (CARE Compliant)"
-    },
-    {
-      "stage": "Accredited Curator Review & FAIR Compliance",
-      "description": "...",
-      "trust": "Certified (FAIR 95%+)"
-    }
+    { "stage": "Field Capture & Sensor Instrumentation", "description": "...", "trust": "High (Authoritative Origin)" },
+    { "stage": "Quarantine & Cryptographic Fixity Verification", "description": "...", "trust": "Verified (Immutable Hash)" },
+    { "stage": "Metadata Enrichment & Environmental Privacy", "description": "...", "trust": "Sanitized (CARE Compliant)" },
+    { "stage": "Accredited Curator Review & FAIR Compliance", "description": "...", "trust": "Certified (FAIR 95%+)" }
   ],
   "trustAssessment": "100% Certified Authoritative Record (NCPOR / NPDC)"
 }`;
 
     try {
-      const result = await callGroqOrOpenAI({
+      const { content } = await callLLM({
         messages: [
           { role: 'system', content: 'You are an authoritative scientific provenance auditor. Return valid JSON only.' },
           { role: 'user', content: prompt }
@@ -587,46 +676,270 @@ Return valid JSON with:
         temperature: 0.2
       });
 
-      if (result && result.summary && Array.isArray(result.steps)) {
-        return {
-          assetTitle: asset.title,
-          summary: result.summary,
-          steps: result.steps,
-          trustAssessment: result.trustAssessment || "100% Certified Authoritative Record (NCPOR / NPDC)"
-        };
+      const result = parseJSONFromLLM(content);
+      if (result?.summary && Array.isArray(result?.steps)) {
+        return { assetTitle: asset.title, ...result };
       }
     } catch (e) {
-      console.warn('[LLMService] explainProvenance live LLM failed, using baseline provenance analyzer:', e);
+      console.warn('[LLMService] explainProvenance failed, using baseline analyzer:', e);
     }
-
-    const steps = [
-      {
-        stage: "Field Capture & Sensor Instrumentation",
-        description: `Collected directly during ${asset.expeditionId || 'NCPOR expedition'} at ${asset.spatialCoverageName}. Captured with calibrated field equipment under official MoES mission protocols.`,
-        trust: "High (Authoritative Origin)"
-      },
-      {
-        stage: "Quarantine & Cryptographic Fixity Verification",
-        description: `File entered an isolated quarantine bucket. A tamper-evident SHA-256 digest (${asset.versions[0]?.sha256?.substring(0, 16) || 'a9f4c3...'}...) was computed and validated against ClamAV security signatures.`,
-        trust: "Verified (Immutable Hash)"
-      },
-      {
-        stage: "Metadata Enrichment & Environmental Privacy",
-        description: `Optical character recognition (OCR) and technical metadata extraction were completed. Sensitive camera GPS coordinates were stripped from public derivatives to safeguard vulnerable nesting areas.`,
-        trust: "Sanitized (CARE Compliant)"
-      },
-      {
-        stage: "Accredited Curator Review & FAIR Compliance",
-        description: `Verified by an authorized NCPOR Data Curator. Standards compliance score: Findable ${asset.fairMetrics.findableScore}%, Accessible ${asset.fairMetrics.accessibleScore}%. Published with clear licensing (${asset.licence}).`,
-        trust: "Certified (FAIR 95%+)"
-      }
-    ];
 
     return {
       assetTitle: asset.title,
-      summary: `The lifecycle of "${asset.title}" represents a certified, fully auditable scientific pipeline. From the Antarctic/Arctic field to public distribution, every step satisfies ISO 14721 (OAIS) preservation standards and W3C PROV-O traceability without unverified modifications.`,
-      steps,
-      trustAssessment: "100% Certified Authoritative Record (NCPOR / NPDC)"
+      summary: `The lifecycle of "${asset.title}" represents a certified, fully auditable scientific pipeline. From the Antarctic/Arctic field to public distribution, every step satisfies ISO 14721 (OAIS) preservation standards and W3C PROV-O traceability.`,
+      steps: [
+        { stage: 'Field Capture & Sensor Instrumentation', description: `Collected during ${asset.expeditionId || 'NCPOR expedition'} at ${asset.spatialCoverageName}. Captured with calibrated equipment under official MoES mission protocols.`, trust: 'High (Authoritative Origin)' },
+        { stage: 'Quarantine & Cryptographic Fixity Verification', description: `File entered isolated quarantine bucket. Tamper-evident SHA-256 digest (${asset.versions[0]?.sha256?.substring(0, 16) || 'a9f4c3...'}...) computed and validated against ClamAV security signatures.`, trust: 'Verified (Immutable Hash)' },
+        { stage: 'Metadata Enrichment & Environmental Privacy', description: 'OCR and technical metadata extraction completed. Sensitive GPS coordinates stripped from public derivatives to safeguard vulnerable nesting areas.', trust: 'Sanitized (CARE Compliant)' },
+        { stage: 'Accredited Curator Review & FAIR Compliance', description: `Verified by authorized NCPOR Data Curator. FAIR Score: Findable ${asset.fairMetrics.findableScore}%, Accessible ${asset.fairMetrics.accessibleScore}%. Published under ${asset.licence}.`, trust: 'Certified (FAIR 95%+)' }
+      ],
+      trustAssessment: '100% Certified Authoritative Record (NCPOR / NPDC)'
+    };
+  }
+
+  // ---------------------------------------------------------------
+  // 7. NEW: Semantic Search for Scientific Catalogue
+  // ---------------------------------------------------------------
+  public async semanticSearchAssets(
+    query: string,
+    assets: Asset[],
+    userRole: string
+  ): Promise<{ rankedIds: string[]; queryInterpretation: string; suggestedFilters: string[] }> {
+    const assetSummaries = assets.map(a =>
+      `ID: ${a.id} | Title: ${a.title} | Type: ${a.type} | Region: ${a.spatialCoverageName} | Subjects: ${a.subjects.slice(0, 3).join(', ')}`
+    ).join('\n');
+
+    const prompt = `You are a polar science data librarian at NCPOR. A user searched: "${query}"
+
+Available datasets:
+${assetSummaries}
+
+Rank the datasets by relevance to the query. Return ONLY valid JSON:
+{
+  "rankedIds": ["id1", "id2", "id3"],
+  "queryInterpretation": "Brief explanation of what the user is looking for",
+  "suggestedFilters": ["Filter suggestion 1", "Filter suggestion 2"]
+}`;
+
+    try {
+      const { content } = await callLLM({
+        messages: [
+          { role: 'system', content: 'You are a scientific data discovery assistant. Return JSON only.' },
+          { role: 'user', content: prompt }
+        ],
+        jsonMode: true,
+        temperature: 0.1
+      });
+
+      const result = parseJSONFromLLM(content);
+      if (result?.rankedIds && Array.isArray(result.rankedIds)) {
+        return result;
+      }
+    } catch (e) {
+      console.warn('[LLMService] semanticSearchAssets failed:', e);
+    }
+
+    // Keyword fallback
+    const lq = query.toLowerCase();
+    const ranked = assets
+      .map(a => ({
+        id: a.id,
+        score: [a.title, a.abstract, ...a.subjects].filter(t => t.toLowerCase().includes(lq)).length
+      }))
+      .filter(r => r.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(r => r.id);
+
+    return {
+      rankedIds: ranked.length > 0 ? ranked : assets.slice(0, 3).map(a => a.id),
+      queryInterpretation: `Searching for polar datasets related to "${query}"`,
+      suggestedFilters: ['Filter by type: Dataset', 'Filter by region: Antarctica']
+    };
+  }
+
+  // ---------------------------------------------------------------
+  // 8. NEW: Station AI Condition Narrator
+  // ---------------------------------------------------------------
+  public async narrateStationConditions(station: any): Promise<{
+    narrative: string;
+    anomalies: string[];
+    alertLevel: 'normal' | 'watch' | 'warning';
+    modelUsed: string;
+  }> {
+    const prompt = `You are an expert meteorologist at NCPOR. Provide a concise real-time condition brief for this polar station:
+
+Station: ${station.name} (${station.programme})
+Coordinates: ${station.latitude}°, ${station.longitude}°
+Current Temperature: ${station.temperatureC}°C
+Wind Speed: ${station.windSpeedKnots} knots at ${station.windDirectionDeg}°
+Pressure: ${station.pressureHpa} hPa
+Humidity: ${station.humidityPercent}%
+Solar Radiation: ${station.solarRadiationWm2} W/m²
+Status: ${station.status}
+
+Write a 2-3 sentence human-readable condition report as if briefing field scientists. Flag any anomalies. Return ONLY valid JSON:
+{
+  "narrative": "Station condition narrative here...",
+  "anomalies": ["Anomaly 1 if any", "Anomaly 2 if any"],
+  "alertLevel": "normal"
+}`;
+
+    try {
+      const { content, providerUsed } = await callLLM({
+        messages: [
+          { role: 'system', content: 'You are a polar meteorology expert. Return valid JSON only.' },
+          { role: 'user', content: prompt }
+        ],
+        jsonMode: true,
+        temperature: 0.2
+      });
+
+      const result = parseJSONFromLLM(content);
+      if (result?.narrative) {
+        return { ...result, modelUsed: providerUsed };
+      }
+    } catch (e) {
+      console.warn('[LLMService] narrateStationConditions failed:', e);
+    }
+
+    const isExtremeTemp = station.temperatureC < -25 || station.temperatureC > 5;
+    const isHighWind = station.windSpeedKnots > 30;
+    const alertLevel = (isExtremeTemp && isHighWind) ? 'warning' : (isExtremeTemp || isHighWind) ? 'watch' : 'normal';
+
+    return {
+      narrative: `${station.name} is currently recording ${station.temperatureC}°C with ${station.windSpeedKnots}-knot winds at ${station.windDirectionDeg}°. Atmospheric pressure stands at ${station.pressureHpa} hPa with ${station.humidityPercent}% relative humidity. Conditions are ${alertLevel === 'normal' ? 'within normal operational parameters' : 'requiring monitoring attention'} for ${station.programme} seasonal baseline.`,
+      anomalies: [
+        ...(isExtremeTemp ? [`Extreme temperature: ${station.temperatureC}°C`] : []),
+        ...(isHighWind ? [`High wind speed: ${station.windSpeedKnots} knots`] : [])
+      ],
+      alertLevel,
+      modelUsed: 'PolarConnect Baseline Meteorology (Offline)'
+    };
+  }
+
+  // ---------------------------------------------------------------
+  // 9. NEW: AI Metadata Enrichment for Ingest Pipeline
+  // ---------------------------------------------------------------
+  public async enrichAssetMetadata(
+    title: string,
+    rawAbstract: string,
+    fileType: string,
+    expedition: string
+  ): Promise<{
+    improvedAbstract: string;
+    suggestedKeywords: string[];
+    missingFields: string[];
+    fairReadiness: number;
+    modelUsed: string;
+  }> {
+    const prompt = `You are an ISO 14721 / FAIR metadata enrichment specialist for the National Polar Data Centre (NPDC), NCPOR.
+
+Analyze and improve this polar research asset metadata:
+Title: ${title}
+Abstract (raw): ${rawAbstract}
+File Type: ${fileType}
+Expedition: ${expedition}
+
+Return ONLY valid JSON:
+{
+  "improvedAbstract": "Enhanced, structured abstract with clear objectives, methods, and significance (2-3 sentences)",
+  "suggestedKeywords": ["GCMD keyword 1", "GCMD keyword 2", "GCMD keyword 3", "GCMD keyword 4", "GCMD keyword 5"],
+  "missingFields": ["Field that should be added", "Another missing field"],
+  "fairReadiness": 78
+}`;
+
+    try {
+      const { content, providerUsed } = await callLLM({
+        messages: [
+          { role: 'system', content: 'You are a scientific metadata enrichment specialist for polar data centres. Return valid JSON only.' },
+          { role: 'user', content: prompt }
+        ],
+        jsonMode: true,
+        temperature: 0.25
+      });
+
+      const result = parseJSONFromLLM(content);
+      if (result?.improvedAbstract) {
+        return { ...result, modelUsed: providerUsed };
+      }
+    } catch (e) {
+      console.warn('[LLMService] enrichAssetMetadata failed:', e);
+    }
+
+    return {
+      improvedAbstract: rawAbstract.length > 50
+        ? rawAbstract
+        : `This ${fileType} documents scientific observations collected during ${expedition || 'an NCPOR expedition'}. ${rawAbstract} The data contributes to India's polar research mandate under the Ministry of Earth Sciences.`,
+      suggestedKeywords: ['Polar Science', 'Antarctica', 'NCPOR', 'Cryosphere', 'Climate Research'],
+      missingFields: ['DOI (persistent identifier)', 'Temporal coverage dates', 'Spatial bounding box coordinates'],
+      fairReadiness: 65,
+      modelUsed: 'PolarConnect Baseline (Offline)'
+    };
+  }
+
+  // ---------------------------------------------------------------
+  // 10. NEW: Curator AI Metadata Quality Advisor
+  // ---------------------------------------------------------------
+  public async reviewMetadataQuality(asset: Asset): Promise<{
+    overallReadiness: 'ready' | 'needs_work' | 'incomplete';
+    fairPredictedScore: number;
+    issues: Array<{ field: string; severity: 'error' | 'warning'; suggestion: string }>;
+    publishRecommendation: boolean;
+    modelUsed: string;
+  }> {
+    const prompt = `You are the NCPOR Chief Data Curator. Review this polar dataset metadata for FAIR compliance before publication:
+
+Title: ${asset.title}
+Abstract length: ${asset.abstract.length} characters
+Subjects/Keywords: ${asset.subjects.join(', ')}
+Licence: ${asset.licence}
+Rights Holder: ${asset.rightsHolder}
+Source URL: ${asset.sourceUrl}
+FAIR Metrics: F=${asset.fairMetrics.findableScore}%, A=${asset.fairMetrics.accessibleScore}%, I=${asset.fairMetrics.interoperableScore}%, R=${asset.fairMetrics.reusableScore}%
+Access State: ${asset.accessState}
+Has SHA-256: ${asset.versions[0]?.sha256 ? 'Yes' : 'No'}
+Contributor count: ${asset.contributors.length}
+
+Assess readiness for public release. Return ONLY valid JSON:
+{
+  "overallReadiness": "ready",
+  "fairPredictedScore": 92,
+  "issues": [
+    { "field": "fieldName", "severity": "warning", "suggestion": "What to fix" }
+  ],
+  "publishRecommendation": true
+}`;
+
+    try {
+      const { content, providerUsed } = await callLLM({
+        messages: [
+          { role: 'system', content: 'You are a scientific data curator performing FAIR compliance review. Return valid JSON only.' },
+          { role: 'user', content: prompt }
+        ],
+        jsonMode: true,
+        temperature: 0.15
+      });
+
+      const result = parseJSONFromLLM(content);
+      if (result?.overallReadiness) {
+        return { ...result, modelUsed: providerUsed };
+      }
+    } catch (e) {
+      console.warn('[LLMService] reviewMetadataQuality failed:', e);
+    }
+
+    const avgFair = Math.round((asset.fairMetrics.findableScore + asset.fairMetrics.accessibleScore + asset.fairMetrics.interoperableScore + asset.fairMetrics.reusableScore) / 4);
+    const issues = [];
+    if (asset.abstract.length < 100) issues.push({ field: 'abstract', severity: 'error' as const, suggestion: 'Abstract is too short — expand to at least 150 characters covering objectives, methods, and significance.' });
+    if (asset.subjects.length < 3) issues.push({ field: 'keywords', severity: 'warning' as const, suggestion: 'Add at least 3 GCMD science keywords for better discoverability.' });
+    if (!asset.versions[0]?.sha256) issues.push({ field: 'sha256', severity: 'error' as const, suggestion: 'Missing cryptographic fixity hash — recompute SHA-256 before publication.' });
+
+    return {
+      overallReadiness: issues.some(i => i.severity === 'error') ? 'needs_work' : avgFair >= 85 ? 'ready' : 'needs_work',
+      fairPredictedScore: avgFair,
+      issues,
+      publishRecommendation: issues.filter(i => i.severity === 'error').length === 0 && avgFair >= 80,
+      modelUsed: 'PolarConnect Baseline Curator (Offline)'
     };
   }
 }

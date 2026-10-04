@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   Search, 
   Layers, 
@@ -16,7 +16,10 @@ import {
   Eye, 
   X, 
   AlertCircle,
-  ArrowUpRight
+  ArrowUpRight,
+  Sparkles,
+  X as XIcon,
+  RefreshCw
 } from 'lucide-react';
 import { Asset, UserRole } from '../../../../packages/shared-types/index.js';
 
@@ -41,7 +44,45 @@ export const ScientificCatalogue: React.FC<ScientificCatalogueProps> = ({
   const [jsonLdModalAsset, setJsonLdModalAsset] = useState<Asset | null>(null);
   const [citationCopiedId, setCitationCopiedId] = useState<string | null>(null);
 
-  // Filter assets
+  // AI Semantic Search State
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiSearchLoading, setAiSearchLoading] = useState(false);
+  const [aiRankedIds, setAiRankedIds] = useState<string[] | null>(null);
+  const [aiInterpretation, setAiInterpretation] = useState<string>('');
+  const [aiFilters, setAiFilters] = useState<string[]>([]);
+
+  const handleAiSearch = useCallback(async () => {
+    const q = aiQuery.trim();
+    if (!q || aiSearchLoading) return;
+    setAiSearchLoading(true);
+    setAiRankedIds(null);
+    try {
+      const res = await fetch('/api/ai/semantic-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q, userRole })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiRankedIds(data.data.rankedIds || null);
+        setAiInterpretation(data.data.queryInterpretation || '');
+        setAiFilters(data.data.suggestedFilters || []);
+      }
+    } catch (e) {
+      console.error('AI search failed:', e);
+    } finally {
+      setAiSearchLoading(false);
+    }
+  }, [aiQuery, aiSearchLoading, userRole]);
+
+  const handleClearAiSearch = () => {
+    setAiRankedIds(null);
+    setAiQuery('');
+    setAiInterpretation('');
+    setAiFilters([]);
+  };
+
+  // Filter assets (AI search reorders, standard filters still apply)
   const filteredAssets = assets.filter(asset => {
     // Role protection: public visitors NEVER see non-public assets
     if ((userRole === 'public_visitor' || userRole === 'student') && asset.accessState !== 'public') {
@@ -73,6 +114,16 @@ export const ScientificCatalogue: React.FC<ScientificCatalogueProps> = ({
 
     return true;
   });
+
+  // If AI search is active, reorder by AI-ranked IDs
+  const displayAssets = aiRankedIds
+    ? [
+        ...aiRankedIds
+          .map(id => filteredAssets.find(a => a.id === id))
+          .filter(Boolean) as Asset[],
+        ...filteredAssets.filter(a => !aiRankedIds.includes(a.id))
+      ]
+    : filteredAssets;
 
   const generateBibTeX = (asset: Asset) => {
     const key = `ncpor_${asset.id.replace(/-/g, '_')}`;
@@ -118,7 +169,51 @@ export const ScientificCatalogue: React.FC<ScientificCatalogueProps> = ({
         </p>
       </div>
 
-      {/* 2. LIBRARY CONTROLS (SEARCH & FILTERS) */}
+      {/* 2. AI SEMANTIC SEARCH BAR */}
+      <div className="py-5 border-b border-[var(--border)] mb-2">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3 focus-within:border-[var(--signal)] transition-all shadow-xs">
+            <Sparkles className="w-4 h-4 text-[var(--signal)] shrink-0" />
+            <input
+              id="ai-catalogue-search"
+              type="text"
+              placeholder="Ask AI: 'find datasets about ice core drilling' or 'Southern Ocean carbon flux'"
+              value={aiQuery}
+              onChange={(e) => setAiQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAiSearch()}
+              className="flex-1 bg-transparent text-[var(--foreground)] placeholder-[var(--muted-foreground)] text-xs focus:outline-none"
+            />
+            {aiRankedIds && (
+              <button onClick={handleClearAiSearch} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors cursor-pointer">
+                <XIcon className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <button
+            id="ai-catalogue-search-btn"
+            onClick={handleAiSearch}
+            disabled={!aiQuery.trim() || aiSearchLoading}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--deep)] disabled:opacity-40 transition-all cursor-pointer shadow-xs"
+          >
+            {aiSearchLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            <span>AI Search</span>
+          </button>
+        </div>
+
+        {/* AI Result Interpretation Banner */}
+        {aiRankedIds && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-lg bg-[var(--secondary)] border border-[var(--border)]">
+            <Sparkles className="w-3.5 h-3.5 text-[var(--signal)] shrink-0" />
+            <span className="text-[11px] text-[var(--foreground)] font-medium">{aiInterpretation}</span>
+            {aiFilters.map((f, i) => (
+              <span key={i} className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]">{f}</span>
+            ))}
+            <span className="ml-auto text-[10px] font-mono text-[var(--signal)] font-semibold">{aiRankedIds.length} results reranked by AI</span>
+          </div>
+        )}
+      </div>
+
+      {/* 3. LIBRARY CONTROLS (KEYWORD SEARCH & FILTERS) */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center py-6 border-b border-[var(--border)] mb-6">
         {/* Search Input */}
         <div className="flex items-center gap-3 bg-[var(--card)] border border-[var(--border)] px-4 py-2.5 rounded-lg flex-1 max-w-md focus-within:border-[var(--ring)] transition-all shadow-2xs">
@@ -201,11 +296,7 @@ export const ScientificCatalogue: React.FC<ScientificCatalogueProps> = ({
               key={asset.id}
               className="border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] flex flex-col justify-between group hover:border-[var(--ring)] transition-all rounded-[var(--radius)] shadow-xs"
             >
-              <div 
-                onClick={() => setInspectAsset(asset)}
-                className="cursor-pointer"
-                title={`Click to inspect ${asset.title}`}
-              >
+              <div>
                 {/* Record Image Thumbnail */}
                 <div className="relative aspect-[1.7] overflow-hidden bg-[var(--secondary)]">
                   <img
