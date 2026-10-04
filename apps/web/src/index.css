@@ -1501,3 +1501,54 @@ img { display: block; max-width: 100%; }
 .pc-flow-link:hover {
   gap: 8px;
 }
+
+/* ── Global Mobile & Tablet Responsiveness ─────────────────────────────── */
+@media (max-width: 768px) {
+  .site-header-inner {
+    width: min(100% - 32px, 1320px) !important;
+    height: 64px !important;
+    gap: 12px !important;
+  }
+  .page-container {
+    width: min(100% - 32px, 1320px) !important;
+  }
+  .editorial-title {
+    font-size: 28px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .pc-welcome-inner,
+  .pc-cta-inner,
+  .pc-modules-inner,
+  .pc-flow-inner,
+  .pc-stats-inner,
+  .page-container {
+    width: min(100% - 24px, 1320px) !important;
+  }
+  .pc-welcome-band {
+    padding: 32px 0 24px !important;
+  }
+  .pc-welcome-title {
+    font-size: 24px !important;
+    line-height: 1.25 !important;
+  }
+  .pc-welcome-sub {
+    font-size: 13.5px !important;
+    margin-top: 10px !important;
+  }
+  .pc-cta-card {
+    padding: 16px !important;
+  }
+  .pc-module-card {
+    flex-direction: column !important;
+  }
+  .pc-module-thumb {
+    width: 100% !important;
+    height: 130px !important;
+  }
+  .pc-badge {
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+  }
+}

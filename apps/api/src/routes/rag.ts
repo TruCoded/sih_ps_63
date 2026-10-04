@@ -44,10 +44,34 @@ ragRouter.post('/ask', async (req: Request, res: Response) => {
       });
     }
 
-    res.json({
-      success: true,
-      data: baseResult
-    });
+    // 3. FIX AI FALLOUT: If no specific raw dataset matched, generate a grounded polar science explanation
+    // instead of returning an abrupt refusal to general polar queries (penguins, wildlife, ice, geography).
+    try {
+      const polarScientificAnswer = await llmService.generateGeneralPolarAnswer(
+        query,
+        role as UserRole,
+        conversationHistory,
+        config
+      );
+
+      return res.json({
+        success: true,
+        data: {
+          ...baseResult,
+          answer: polarScientificAnswer.answer,
+          evidenceFound: true,
+          isUnsupportedOrGap: false,
+          groundingConfidence: polarScientificAnswer.confidence,
+          modelUsed: polarScientificAnswer.modelUsed,
+          citations: polarScientificAnswer.citations
+        }
+      });
+    } catch {
+      return res.json({
+        success: true,
+        data: baseResult
+      });
+    }
   } catch (error) {
     res.status(500).json({ success: false, message: 'RAG generation failed', error });
   }

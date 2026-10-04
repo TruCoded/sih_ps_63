@@ -221,17 +221,26 @@ export const StationCommandHUD: React.FC<StationCommandHUDProps> = ({
 
   return (
     <div className="page-container py-12">
-      {/* 1. KINDRED-PALETTE PAGE INTRO */}
+      {/* 1. KINDRED-PALETTE PAGE INTRO WITH HUD DEFINITION */}
       <div className="pb-10 border-b border-[var(--border)] mb-8">
         <div className="section-kicker">
           <span>05</span>
           <span>Observatories</span>
         </div>
-        <h1 className="editorial-title">
-          Station Command <em className="font-serif italic font-normal text-[var(--signal)]">HUD.</em>
-        </h1>
-        <p className="text-[var(--muted-foreground)] text-sm sm:text-base leading-relaxed max-w-2xl mt-3 font-normal">
-          Real-time automatic weather station (AWS) feeds, barometric pressures, and high-latitude environmental telemetry across Maitri, Bharati, Himadri, and Himansh.
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h1 className="editorial-title">
+            Station Command <em className="font-serif italic font-normal text-[var(--signal)]">HUD.</em>
+          </h1>
+          <span 
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono font-medium bg-[var(--secondary)] text-[var(--foreground)] border border-[var(--border)] shadow-2xs hover:border-[var(--signal)] hover:bg-[var(--card)] hover:scale-105 transition-all cursor-help"
+            title="Heads-Up Display: A real-time scientific telemetry console delivering immediate situational awareness across India's polar observatories"
+          >
+            <Radio className="w-3 h-3 text-[var(--signal)] animate-pulse" />
+            <strong>HUD:</strong> Heads-Up Display Console
+          </span>
+        </div>
+        <p className="text-[var(--muted-foreground)] text-sm sm:text-base leading-relaxed max-w-3xl mt-3 font-normal">
+          <span className="font-semibold text-[var(--foreground)]">What is a HUD?</span> The <em>Heads-Up Display</em> is an integrated polar telemetry console delivering live automatic weather station (AWS) feeds, atmospheric barometric pressures, ultrasonic wind vectors, and pyranometer solar flux directly from <strong>Maitri</strong>, <strong>Bharati</strong>, <strong>Himadri</strong>, and <strong>Himansh</strong>.
         </p>
       </div>
 
@@ -291,10 +300,10 @@ export const StationCommandHUD: React.FC<StationCommandHUDProps> = ({
                 <button
                   key={st.stationId}
                   onClick={() => setSelectedStationId(st.stationId)}
-                  className={`p-3 rounded-lg text-left transition-all border cursor-pointer ${
+                  className={`p-3 rounded-lg text-left transition-all duration-300 border cursor-pointer hover:-translate-y-1 hover:shadow-md ${
                     isSelected
-                      ? 'bg-[var(--secondary)] border-[var(--signal)] shadow-xs'
-                      : 'bg-[var(--card)] border-[var(--border)] hover:bg-[var(--secondary)]'
+                      ? 'bg-[var(--secondary)] border-[var(--signal)] shadow-sm -translate-y-0.5 ring-1 ring-[var(--signal)]/40'
+                      : 'bg-[var(--card)] border-[var(--border)] hover:bg-[var(--secondary)] hover:border-[var(--signal)]/60'
                   }`}
                 >
                   <div className="text-[11px] font-semibold text-[var(--foreground)] truncate">{st.name}</div>
@@ -348,10 +357,10 @@ export const StationCommandHUD: React.FC<StationCommandHUDProps> = ({
               {/* Big Sensor Gauge Grid */}
               <div className="grid grid-cols-2 gap-3 mb-5">
                 {/* Temperature */}
-                <div className="bg-[var(--secondary)] rounded-xl p-3.5 border border-[var(--border)]">
+                <div className="bg-[var(--secondary)] rounded-xl p-3.5 border border-[var(--border)] transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[var(--signal)] hover:bg-[var(--card)] cursor-default group">
                   <div className="flex items-center text-[var(--muted-foreground)] text-xs mb-1">
-                    <Thermometer className="w-3.5 h-3.5 mr-1 text-[var(--signal)]" />
-                    <span>Surface Air Temp</span>
+                    <Thermometer className="w-3.5 h-3.5 mr-1 text-[var(--signal)] group-hover:scale-110 transition-transform" />
+                    <span className="group-hover:text-[var(--foreground)] transition-colors">Surface Air Temp</span>
                   </div>
                   <div className="text-2xl font-bold font-mono text-[var(--foreground)]">
                     {selectedStation.temperatureC}°C
@@ -360,10 +369,10 @@ export const StationCommandHUD: React.FC<StationCommandHUDProps> = ({
                 </div>
 
                 {/* Wind */}
-                <div className="bg-[var(--secondary)] rounded-xl p-3.5 border border-[var(--border)]">
+                <div className="bg-[var(--secondary)] rounded-xl p-3.5 border border-[var(--border)] transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[var(--primary)] hover:bg-[var(--card)] cursor-default group">
                   <div className="flex items-center text-[var(--muted-foreground)] text-xs mb-1">
-                    <Wind className="w-3.5 h-3.5 mr-1 text-[var(--primary)]" />
-                    <span>Wind Velocity</span>
+                    <Wind className="w-3.5 h-3.5 mr-1 text-[var(--primary)] group-hover:scale-110 transition-transform" />
+                    <span className="group-hover:text-[var(--foreground)] transition-colors">Wind Velocity</span>
                   </div>
                   <div className="text-2xl font-bold font-mono text-[var(--foreground)]">
                     {selectedStation.windSpeedKnots} <span className="text-xs font-normal">kts</span>
@@ -372,10 +381,10 @@ export const StationCommandHUD: React.FC<StationCommandHUDProps> = ({
                 </div>
 
                 {/* Pressure */}
-                <div className="bg-[var(--secondary)] rounded-xl p-3.5 border border-[var(--border)]">
+                <div className="bg-[var(--secondary)] rounded-xl p-3.5 border border-[var(--border)] transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-emerald-500 hover:bg-[var(--card)] cursor-default group">
                   <div className="flex items-center text-[var(--muted-foreground)] text-xs mb-1">
-                    <Gauge className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                    <span>Barometric Pressure</span>
+                    <Gauge className="w-3.5 h-3.5 mr-1 text-emerald-600 group-hover:scale-110 transition-transform" />
+                    <span className="group-hover:text-[var(--foreground)] transition-colors">Barometric Pressure</span>
                   </div>
                   <div className="text-2xl font-bold font-mono text-[var(--foreground)]">
                     {selectedStation.pressureHpa} <span className="text-xs font-normal">hPa</span>
@@ -384,10 +393,10 @@ export const StationCommandHUD: React.FC<StationCommandHUDProps> = ({
                 </div>
 
                 {/* Solar Radiation */}
-                <div className="bg-[var(--secondary)] rounded-xl p-3.5 border border-[var(--border)]">
+                <div className="bg-[var(--secondary)] rounded-xl p-3.5 border border-[var(--border)] transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-amber-500 hover:bg-[var(--card)] cursor-default group">
                   <div className="flex items-center text-[var(--muted-foreground)] text-xs mb-1">
-                    <Sun className="w-3.5 h-3.5 mr-1 text-amber-600" />
-                    <span>Solar Flux</span>
+                    <Sun className="w-3.5 h-3.5 mr-1 text-amber-600 group-hover:scale-110 transition-transform" />
+                    <span className="group-hover:text-[var(--foreground)] transition-colors">Solar Flux</span>
                   </div>
                   <div className="text-2xl font-bold font-mono text-[var(--foreground)]">
                     {selectedStation.solarRadiationWm2} <span className="text-xs font-normal">W/m²</span>
@@ -397,7 +406,7 @@ export const StationCommandHUD: React.FC<StationCommandHUDProps> = ({
               </div>
 
               {/* Diurnal Trend Chart */}
-              <div className="bg-[var(--secondary)]/60 rounded-xl p-4 border border-[var(--border)]">
+              <div className="bg-[var(--secondary)]/60 rounded-xl p-4 border border-[var(--border)] transition-all duration-300 hover:shadow-md hover:border-[var(--signal)]/50 hover:bg-[var(--card)]">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-mono text-[var(--foreground)] font-semibold flex items-center">
                     <Layers className="w-3 h-3 mr-1 text-[var(--signal)]" />

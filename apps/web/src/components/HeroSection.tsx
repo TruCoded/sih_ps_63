@@ -56,9 +56,21 @@ const MODULES = [
 ];
 
 const BADGES = [
-  { icon: Shield, label: 'Permission-filtered access per NCPOR policy' },
-  { icon: Zap, label: 'Live telemetry from Maitri, Bharati, Himadri & Kadakhstan' },
-  { icon: Globe, label: 'FAIR / CARE data principles with W3C PROV-O audit trail' },
+  { 
+    icon: Shield, 
+    label: 'Permission-filtered access per NCPOR policy',
+    desc: 'Role-based access (Public, Student, Researcher, Curator) enforcing data embargo and licensing policies.'
+  },
+  { 
+    icon: Zap, 
+    label: 'Live telemetry from Maitri, Bharati, Himadri & Himansh',
+    desc: 'Streaming real-time AWS readings (temperature, wind, barometric pressure, solar flux) from India’s polar observatories.'
+  },
+  { 
+    icon: Globe, 
+    label: 'FAIR / CARE data principles with W3C PROV-O audit trail',
+    desc: 'Findable, Accessible, Interoperable, Reusable scientific records with cryptographic provenance graphs.'
+  },
 ];
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
@@ -75,11 +87,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
             One trusted place to explore India's polar expeditions, search the scientific
             catalogue and ask cited questions about the science.
           </p>
-          <div className="pc-badges-row">
-            {BADGES.map(({ icon: Icon, label }) => (
-              <div key={label} className="pc-badge">
-                <Icon size={13} />
-                <span>{label}</span>
+          <div className="pc-badges-row flex flex-wrap gap-2.5 justify-center mt-6">
+            {BADGES.map(({ icon: Icon, label, desc }) => (
+              <div 
+                key={label} 
+                className="pc-badge group relative cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-[var(--signal)] hover:shadow-md hover:bg-[var(--secondary)]"
+                title={desc}
+              >
+                <Icon size={14} className="text-[var(--signal)] group-hover:scale-110 transition-transform" />
+                <span className="group-hover:text-[var(--foreground)] transition-colors">{label}</span>
               </div>
             ))}
           </div>

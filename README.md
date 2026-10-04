@@ -173,15 +173,16 @@ npm run dev:web
 | Endpoint | Method | Description |
 |---|---|---|
 | `/api/health` | `GET` | Health check and active LLM provider diagnostics |
-| `/api/stations` | `GET` | Station telemetry, coordinates, and weather metrics |
+| `/api/stations/weather` | `GET` | Live station telemetry, coordinates, and weather metrics for all stations |
+| `/api/stations/:id` | `GET` | Specific station telemetry and observation records |
 | `/api/expeditions` | `GET` | Timeline records for Arctic, Antarctic, and Southern Ocean voyages |
 | `/api/assets` | `GET`, `POST` | FAIR scientific asset catalogue and new asset ingestion |
-| `/api/rag/ask` | `POST` | Grounded AI Q&A with citations and confidence scoring |
-| `/api/rag/benchmark` | `GET` | RAG retrieval evaluation metrics and benchmark suite |
-| `/api/content-drafts` | `POST` | AI science communication draft generation |
+| `/api/ask` | `POST` | Grounded AI Q&A with source citations and confidence scoring |
+| `/api/benchmarks/run` | `POST` | RAG retrieval evaluation benchmark suite (25 scientific + security tests) |
+| `/api/content-drafts` | `POST` | AI science communication draft generation (press releases, explainers) |
 | `/api/provenance/:id` | `GET` | W3C PROV lineage graph for a given asset |
 | `/api/education/modules`| `GET` | Educational learning modules and quiz data |
-| `/api/audit` | `GET` | Immutable system audit log records |
+| `/api/audit-events` | `GET` | Immutable system audit log records |
 
 ---
 
