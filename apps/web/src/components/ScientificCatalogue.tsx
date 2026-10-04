@@ -140,14 +140,35 @@ export const ScientificCatalogue: React.FC<ScientificCatalogueProps> = ({
   };
 
   const getRecordImage = (asset: Asset) => {
-    const title = (asset.title + ' ' + asset.spatialCoverageName).toLowerCase();
-    if (title.includes('ocean') || title.includes('marine') || title.includes('sea') || title.includes('cruise')) {
-      return '/assets/southern-ocean.jpg';
+    const id = asset.id || '';
+    const title = (asset.title + ' ' + (asset.subjects || []).join(' ') + ' ' + asset.spatialCoverageName).toLowerCase();
+
+    // 1. Direct ID & Topic Matching to ensure every single record has a unique, stunning polar image
+    if (id === 'ncpor-bio-penguins' || title.includes('penguin') || title.includes('avian') || title.includes('rookery')) {
+      return '/assets/antarctic-penguins.jpg';
     }
-    if (title.includes('station') || title.includes('bharati') || title.includes('maitri') || title.includes('himadri')) {
+    if (id === 'ncpor-img-bharati-aurora' || title.includes('aurora') || title.includes('space weather')) {
+      return '/assets/aurora-bharati.jpg';
+    }
+    if (id === 'ncpor-vid-chandra-himansh' || title.includes('himansh') || title.includes('chandra') || title.includes('himalaya') || title.includes('spiti')) {
+      return '/assets/himansh-himalayas.jpg';
+    }
+    if (id === 'ncpor-cr-so-12' || title.includes('southern ocean') || title.includes('ctd') || title.includes('cruise') || title.includes('hydrograph')) {
+      return '/assets/research-ship.jpg';
+    }
+    if (id === 'ncpor-ds-maitri-met' || title.includes('maitri') || title.includes('meteorological') || title.includes('surface temp')) {
       return '/assets/polar-station.jpg';
     }
-    if (title.includes('biology') || title.includes('microb') || title.includes('field') || title.includes('sample')) {
+    if (id === 'ncpor-rep-43isea' || title.includes('43rd') || title.includes('isea') || title.includes('technical report')) {
+      return '/assets/bharati-station.jpg';
+    }
+    if (id === 'ncpor-img-himadri-fjord' || title.includes('himadri') || title.includes('kongsfjorden') || title.includes('svalbard') || title.includes('ny-ålesund') || title.includes('arctic')) {
+      return '/assets/polar-hero-clear.jpg';
+    }
+    if (title.includes('ocean') || title.includes('marine') || title.includes('sea')) {
+      return '/assets/southern-ocean.jpg';
+    }
+    if (title.includes('core') || title.includes('drill') || title.includes('paleoclimate')) {
       return '/assets/field-notes.jpg';
     }
     return '/assets/antarctica-hero.jpg';

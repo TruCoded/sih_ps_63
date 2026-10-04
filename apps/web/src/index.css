@@ -140,27 +140,27 @@ img { display: block; max-width: 100%; }
   color: var(--foreground);
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: fit-content;
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 900;
   line-height: 1;
-  letter-spacing: .035em;
+  letter-spacing: .02em;
   cursor: pointer;
   user-select: none;
 }
 
 .brand-light {
-  font-weight: 400;
-  opacity: 0.8;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .brand small {
   display: block;
-  font-size: 8px;
-  font-weight: 600;
-  letter-spacing: .24em;
-  margin-top: 5px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  margin-top: 4px;
   color: var(--muted-foreground);
 }
 
@@ -1145,16 +1145,17 @@ img { display: block; max-width: 100%; }
   color: var(--foreground);
 }
 
-/* ── Welcome Band ──────────────────────────────────────────────────────────── */
+/* ── Welcome Band — Enlarged & Enhanced Polar Connect Hero ─────────────────── */
 .pc-welcome-band {
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(135deg, oklch(0.97 0.012 218) 0%, oklch(0.99 0.004 220) 100%);
-  padding: 36px 0 28px;
+  background: radial-gradient(circle at 50% 0%, rgba(30, 111, 168, 0.08) 0%, transparent 65%), linear-gradient(135deg, oklch(0.97 0.012 218) 0%, oklch(0.99 0.004 220) 100%);
+  padding: 44px 0 36px;
+  position: relative;
 }
 
 .pc-welcome-inner {
   width: 100%;
-  max-width: 1080px;
+  max-width: 1200px;
   margin-inline: auto;
   padding-inline: 24px;
 }
@@ -1189,24 +1190,27 @@ img { display: block; max-width: 100%; }
 }
 
 .pc-welcome-title {
-  font-size: clamp(22px, 3vw, 32px);
-  font-weight: 800;
-  line-height: 1.2;
+  font-size: clamp(32px, 5.5vw, 64px);
+  font-weight: 900;
+  line-height: 1.1;
   color: var(--foreground);
-  margin: 0 0 10px;
-  letter-spacing: -0.02em;
+  margin: 0 0 12px;
+  letter-spacing: -0.03em;
 }
 
 .pc-brand-accent {
   color: #1e6fa8;
+  background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .pc-welcome-sub {
   font-size: 15px;
   line-height: 1.65;
   color: var(--muted-foreground);
-  max-width: 580px;
-  margin: 0 0 20px;
+  max-width: 680px;
+  margin: 0 auto 20px;
 }
 
 .pc-badges-row {

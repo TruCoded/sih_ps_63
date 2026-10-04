@@ -114,31 +114,44 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* 2. Main Kindred-Palette Site Header Inner */}
       <div className="site-header-inner">
-        {/* Brand Logo & Rotating Orbital Symbol */}
+        {/* Brand Logo & Rotating Orbital Symbol - Enlarged & Enhanced Project Name */}
         <div 
           onClick={() => onTabChange('command')}
-          className="brand"
+          className="brand group flex items-center gap-3 cursor-pointer select-none transition-transform hover:scale-[1.02]"
           aria-label="PolarConnect home"
         >
-          <svg
-            width="32" height="32" viewBox="0 0 64 64" fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-            style={{ flexShrink: 0 }}
-          >
-            <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="2.5" fill="none"/>
-            <ellipse cx="32" cy="32" rx="28" ry="6.5" stroke="currentColor" strokeWidth="1.8" fill="none"/>
-            <ellipse cx="32" cy="20" rx="21" ry="4.5" stroke="currentColor" strokeWidth="1.3" fill="none"/>
-            <ellipse cx="32" cy="44" rx="21" ry="4.5" stroke="currentColor" strokeWidth="1.3" fill="none"/>
-            <line x1="32" y1="4" x2="32" y2="60" stroke="currentColor" strokeWidth="1.8"/>
-            <path d="M 32 4 Q 11 32 32 60" stroke="currentColor" strokeWidth="1.2" fill="none"/>
-            <path d="M 32 4 Q 53 32 32 60" stroke="currentColor" strokeWidth="1.2" fill="none"/>
-          </svg>
-          <div>
-            <div className="font-extrabold text-[15px] tracking-[0.035em] leading-none text-[var(--foreground)]">
-              POLAR<span className="brand-light">CONNECT</span>
+          <div className="relative flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-sky-500/15 via-teal-500/10 to-indigo-500/15 border border-sky-400/30 text-sky-600 dark:text-sky-400 shadow-xs group-hover:border-sky-500/60 group-hover:shadow-md transition-all">
+            <svg
+              width="26" height="26" viewBox="0 0 64 64" fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+              className="group-hover:rotate-45 transition-transform duration-500 text-sky-600 dark:text-sky-400"
+              style={{ flexShrink: 0 }}
+            >
+              <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="3" fill="none"/>
+              <ellipse cx="32" cy="32" rx="28" ry="7" stroke="currentColor" strokeWidth="2.2" fill="none"/>
+              <ellipse cx="32" cy="20" rx="21" ry="5" stroke="currentColor" strokeWidth="1.8" fill="none"/>
+              <ellipse cx="32" cy="44" rx="21" ry="5" stroke="currentColor" strokeWidth="1.8" fill="none"/>
+              <line x1="32" y1="4" x2="32" y2="60" stroke="currentColor" strokeWidth="2.2"/>
+              <path d="M 32 4 Q 11 32 32 60" stroke="currentColor" strokeWidth="1.6" fill="none"/>
+              <path d="M 32 4 Q 53 32 32 60" stroke="currentColor" strokeWidth="1.6" fill="none"/>
+            </svg>
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[var(--card)] animate-pulse" title="Platform Online" />
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="font-black text-xl sm:text-2xl tracking-tight leading-none text-[var(--foreground)]">
+                POLAR<span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-teal-500 font-black">CONNECT</span>
+              </span>
+              <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wider uppercase bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-300/40">
+                PROJECT
+              </span>
             </div>
-            <small>SCIENCE, SHARED.</small>
+            <div className="text-[9px] sm:text-[10px] font-mono font-semibold tracking-wider text-[var(--muted-foreground)] uppercase mt-0.5 flex items-center gap-1.5">
+              <span>SCIENCE, SHARED.</span>
+              <span className="hidden md:inline text-[var(--border)]">|</span>
+              <span className="hidden md:inline text-[var(--muted-foreground)] font-medium">MoES • NCPOR</span>
+            </div>
           </div>
         </div>
 

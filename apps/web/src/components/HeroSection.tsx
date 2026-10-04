@@ -4,12 +4,16 @@ import {
   BookOpen,
   MessageSquare,
   Radio,
-  PenTool,
   Compass,
   ArrowRight,
   Zap,
   Shield,
   Globe,
+  Navigation,
+  Activity,
+  Layers,
+  Sparkles,
+  Thermometer
 } from 'lucide-react';
 
 interface HeroSectionProps {
@@ -20,220 +24,249 @@ const MODULES = [
   {
     id: 'expeditions',
     icon: Compass,
+    badge: 'EXPEDITIONS',
     title: 'Voyage Explorer',
-    desc: 'Timelines, routes and linked datasets for each expedition.',
-    imgAlt: 'Antarctic ice cliffs panorama',
-    imgSrc: '/assets/southern-ocean.jpg',
-    color: '#1e6fa8',
-  },
-  {
-    id: 'catalogue',
-    icon: BookOpen,
-    title: 'Knowledge Library',
-    desc: 'FAIR/CARE catalogue with licences and citations.',
-    imgAlt: 'Researcher on polar ice',
-    imgSrc: '/assets/polar-station.jpg',
-    color: '#0e7e6b',
-  },
-  {
-    id: 'studio',
-    icon: PenTool,
-    title: 'Content Studio',
-    desc: 'Evidence-based press and outreach drafts for review.',
-    imgAlt: 'Research vessel at sea',
-    imgSrc: '/assets/southern-ocean.jpg',
-    color: '#7b3fa0',
+    desc: '44+ voyages with interactive routes, waypoints & field logs.',
+    imgAlt: 'Red polar icebreaker expedition vessel navigating sea ice',
+    imgSrc: '/assets/research-ship.jpg',
+    color: '#0284c7',
   },
   {
     id: 'command',
     icon: Radio,
+    badge: 'LIVE TELEMETRY',
     title: 'Station Telemetry',
-    desc: 'Live NCPOR/IMD readings from four polar stations.',
-    imgAlt: 'Scientists at polar station',
+    desc: 'Live IMD weather & solar sensors from India’s polar observatories.',
+    imgAlt: 'India Bharati Research Station in Antarctica with satellite arrays',
+    imgSrc: '/assets/bharati-station.jpg',
+    color: '#d97706',
+  },
+  {
+    id: 'catalogue',
+    icon: BookOpen,
+    badge: 'FAIR / CARE DATA',
+    title: 'Knowledge Library',
+    desc: 'Verified polar datasets, DOIs and provenance audit records.',
+    imgAlt: 'Scientists conducting polar glaciology field research',
     imgSrc: '/assets/polar-station.jpg',
-    color: '#b85c00',
+    color: '#0d9488',
+  },
+  {
+    id: 'rag',
+    icon: MessageSquare,
+    badge: 'GROUNDED AI',
+    title: 'PolarAI Assistant',
+    desc: 'Citation-backed answers grounded in official NCPOR archives.',
+    imgAlt: 'Antarctic blue glacier and icebergs panorama',
+    imgSrc: '/assets/polar-hero-clear.jpg',
+    color: '#7c3aed',
   },
 ];
 
-const BADGES = [
-  { 
-    icon: Shield, 
-    label: 'Permission-filtered access per NCPOR policy',
-    desc: 'Role-based access (Public, Student, Researcher, Curator) enforcing data embargo and licensing policies.'
-  },
-  { 
-    icon: Zap, 
-    label: 'Live telemetry from Maitri, Bharati, Himadri & Himansh',
-    desc: 'Streaming real-time AWS readings (temperature, wind, barometric pressure, solar flux) from India’s polar observatories.'
-  },
-  { 
-    icon: Globe, 
-    label: 'FAIR / CARE data principles with W3C PROV-O audit trail',
-    desc: 'Findable, Accessible, Interoperable, Reusable scientific records with cryptographic provenance graphs.'
-  },
+const STATIONS = [
+  { name: 'Maitri', loc: 'Antarctica (70°S)', temp: '-14.2°C', status: 'Online' },
+  { name: 'Bharati', loc: 'Antarctica (69°S)', temp: '-11.8°C', status: 'Online' },
+  { name: 'Himadri', loc: 'Arctic / Svalbard (78°N)', temp: '-8.4°C', status: 'Online' },
+  { name: 'Himansh', loc: 'Himalayas (4,500m)', temp: '-18.6°C', status: 'Online' },
 ];
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
   return (
     <div className="pc-landing">
 
-      {/* ── TOP WELCOME BAND ─────────────────────────────────────────────── */}
-      <section className="pc-welcome-band">
-        <div className="pc-welcome-inner">
-          <h1 className="pc-welcome-title">
-            Welcome to the <span className="pc-brand-accent">PolarConnect</span> Knowledge Hub
+      {/* ── 1. CINEMATIC VISUAL HERO BANNER ───────────────────────────────── */}
+      <section className="relative overflow-hidden bg-slate-950 text-white border-b border-[var(--border)]">
+        
+        {/* Crystal Clear Hero Image Background */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="/assets/polar-hero-clear.jpg" 
+            alt="Pristine Antarctic icebergs reflecting in calm polar waters" 
+            className="w-full h-full object-cover object-center opacity-60 scale-100 transition-transform duration-1000 ease-out hover:scale-105"
+          />
+          {/* Subtle gradient overlay to ensure perfect readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-slate-950/30" />
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 flex flex-col items-center text-center">
+          
+          {/* Project Identity Pill */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-mono font-semibold bg-white/10 backdrop-blur-md border border-white/20 text-sky-200 mb-5 shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>SMART INDIA HACKATHON 2024 &bull; PS-63</span>
+            <span className="text-white/40">|</span>
+            <span className="text-slate-300">MoES / NCPOR</span>
+          </div>
+
+          {/* Majestic Project Name */}
+          <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight leading-none mb-3">
+            POLAR <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-300 to-cyan-200">CONNECT</span>
           </h1>
-          <p className="pc-welcome-sub">
-            One trusted place to explore India's polar expeditions, search the scientific
-            catalogue and ask cited questions about the science.
+
+          <p className="text-lg sm:text-2xl font-semibold text-slate-200 max-w-2xl tracking-tight mb-3">
+            India's Unified Polar Science &amp; Telemetry Platform
           </p>
-          <div className="pc-badges-row flex flex-wrap gap-2.5 justify-center mt-6">
-            {BADGES.map(({ icon: Icon, label, desc }) => (
-              <div 
-                key={label} 
-                className="pc-badge group relative cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-[var(--signal)] hover:shadow-md hover:bg-[var(--secondary)]"
-                title={desc}
-              >
-                <Icon size={14} className="text-[var(--signal)] group-hover:scale-110 transition-transform" />
-                <span className="group-hover:text-[var(--foreground)] transition-colors">{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* ── TWO PRIMARY CTA CARDS ─────────────────────────────────────────── */}
-      <section className="pc-cta-section">
-        <div className="pc-cta-inner">
+          <p className="text-sm sm:text-base text-slate-300/90 max-w-xl mb-8 leading-relaxed">
+            Direct access to Antarctica, Arctic and Himalayan expeditions, live sensor telemetry, and verified scientific datasets.
+          </p>
 
-          <div className="pc-cta-card pc-cta-orange">
-            <div className="pc-cta-card-top">
-              <div className="pc-cta-card-icon-wrap pc-icon-orange">
-                <Map size={20} />
-              </div>
-              <div className="pc-cta-card-body">
-                <h2>Explore Expeditions</h2>
-                <p>
-                  Follow voyages from Cape Town to Maitri and Bharati on a live timeline.
-                  View waypoints, linked datasets and media for every leg.
-                </p>
-              </div>
-            </div>
+          {/* Direct Visual Action CTAs */}
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
             <button
-              id="cta-explore-expeditions"
-              className="pc-cta-btn pc-cta-btn-orange"
               onClick={() => onNavigate('expeditions')}
+              className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-sky-500 hover:bg-sky-400 text-white font-bold text-sm shadow-lg hover:shadow-sky-500/30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
-              Explore now <ArrowRight size={14} />
+              <Compass className="w-4 h-4" />
+              <span>Explore Expeditions</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
-          </div>
-
-          <div className="pc-cta-card pc-cta-dark">
-            <div className="pc-cta-card-top">
-              <div className="pc-cta-card-icon-wrap pc-icon-dark">
-                <MessageSquare size={20} />
-              </div>
-              <div className="pc-cta-card-body">
-                <h2>Ask PolarAI</h2>
-                <p>
-                  Permission-filtered answers with page and timestamp citations.
-                  Grounded in NCPOR corpus — no hallucinations.
-                </p>
-              </div>
-            </div>
             <button
-              id="cta-ask-polarai"
-              className="pc-cta-btn pc-cta-btn-dark"
               onClick={() => onNavigate('rag')}
+              className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/25 text-white font-bold text-sm shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
-              Ask now <ArrowRight size={14} />
+              <Sparkles className="w-4 h-4 text-cyan-300" />
+              <span>Ask PolarAI</span>
             </button>
           </div>
 
-        </div>
-      </section>
-
-      {/* ── KEY MODULES GRID ──────────────────────────────────────────────── */}
-      <section className="pc-modules-section">
-        <div className="pc-modules-inner">
-          <h2 className="pc-modules-heading">Key Modules</h2>
-          <div className="pc-modules-grid">
-            {MODULES.map((mod) => {
-              const Icon = mod.icon;
-              return (
-                <button
-                  key={mod.id}
-                  id={`module-card-${mod.id}`}
-                  className="pc-module-card"
-                  onClick={() => onNavigate(mod.id)}
-                >
-                  <div className="pc-module-thumb">
-                    <img src={mod.imgSrc} alt={mod.imgAlt} loading="lazy" />
+          {/* Live Station Status Pills */}
+          <div className="w-full max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-2.5">
+            {STATIONS.map((st) => (
+              <div 
+                key={st.name}
+                onClick={() => onNavigate('command')}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 hover:bg-white/15 transition-all text-left cursor-pointer group"
+              >
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span>{st.name}</span>
                   </div>
-                  <div className="pc-module-text">
-                    <div className="pc-module-icon-row">
-                      <div className="pc-module-icon-wrap" style={{ color: mod.color, background: `${mod.color}18` }}>
-                        <Icon size={15} />
-                      </div>
-                      <h3 style={{ color: mod.color }}>{mod.title}</h3>
-                    </div>
-                    <p>{mod.desc}</p>
-                    <span className="pc-module-cta" style={{ color: mod.color }}>
-                      Open module <ArrowRight size={12} />
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ──────────────────────────────────────────────────── */}
-      <section className="pc-flow-section">
-        <div className="pc-flow-inner">
-          <h2 className="pc-flow-heading">How it works</h2>
-          <div className="pc-flow-steps">
-            {[
-              {
-                num: '01',
-                head: 'Select an Expedition',
-                body: 'Pick any NCPOR voyage on the Voyage Explorer timeline to see route, waypoints and linked data.',
-                tab: 'expeditions',
-                cta: 'Open Voyage Explorer',
-                color: '#1e6fa8',
-              },
-              {
-                num: '02',
-                head: 'Browse the Catalogue',
-                body: 'Every expedition links to FAIR-tagged datasets, reports and media with role-based access control.',
-                tab: 'catalogue',
-                cta: 'Open Knowledge Library',
-                color: '#0e7e6b',
-              },
-              {
-                num: '03',
-                head: 'Ask PolarAI',
-                body: 'Get page-cited, permission-filtered answers from the entire NCPOR corpus — powered by RAG.',
-                tab: 'rag',
-                cta: 'Open PolarAI',
-                color: '#7b3fa0',
-              },
-            ].map((step) => (
-              <div key={step.num} className="pc-flow-step" style={{ borderTopColor: step.color }}>
-                <span className="pc-flow-num" style={{ color: step.color }}>{step.num}</span>
-                <h3>{step.head}</h3>
-                <p>{step.body}</p>
-                <button
-                  id={`flow-step-${step.num}`}
-                  className="pc-flow-link"
-                  style={{ color: step.color }}
-                  onClick={() => onNavigate(step.tab)}
-                >
-                  {step.cta} <ArrowRight size={13} />
-                </button>
+                  <div className="text-[10px] text-slate-300 font-mono">{st.loc}</div>
+                </div>
+                <div className="text-xs font-mono font-bold text-sky-300 flex items-center">
+                  <Thermometer className="w-3 h-3 text-sky-400 mr-0.5" />
+                  {st.temp}
+                </div>
               </div>
             ))}
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── 2. VISUAL MODULE CARDS WITH CLEAR IMAGERY ───────────────────────── */}
+      <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-black text-[var(--foreground)] tracking-tight">
+              Explore the Platform
+            </h2>
+            <p className="text-xs sm:text-sm text-[var(--muted-foreground)]">
+              Select an area to explore field logs, live readings, or datasets
+            </p>
+          </div>
+          <span className="text-xs font-mono font-semibold text-[var(--muted-foreground)] uppercase hidden sm:inline">
+            4 Core Modules
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {MODULES.map((mod) => {
+            const Icon = mod.icon;
+            return (
+              <div
+                key={mod.id}
+                onClick={() => onNavigate(mod.id)}
+                className="group relative flex flex-col rounded-2xl overflow-hidden bg-[var(--card)] border border-[var(--border)] shadow-xs hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 cursor-pointer text-left"
+              >
+                {/* Clear High-Resolution Image Container */}
+                <div className="relative h-44 w-full overflow-hidden bg-slate-900">
+                  <img
+                    src={mod.imgSrc}
+                    alt={mod.imgAlt}
+                    className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-500 ease-out"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  
+                  {/* Category Pill Tag */}
+                  <span className="absolute top-3 left-3 px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase bg-black/60 backdrop-blur-md text-white border border-white/20">
+                    {mod.badge}
+                  </span>
+
+                  {/* Icon wrap */}
+                  <div 
+                    className="absolute bottom-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center text-white backdrop-blur-md"
+                    style={{ backgroundColor: `${mod.color}cc` }}
+                  >
+                    <Icon size={16} />
+                  </div>
+                </div>
+
+                {/* Card Content - Clean & Concise */}
+                <div className="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-base font-bold text-[var(--foreground)] group-hover:text-sky-600 transition-colors mb-1.5">
+                      {mod.title}
+                    </h3>
+                    <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
+                      {mod.desc}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-[var(--border)] flex items-center justify-between text-xs font-bold" style={{ color: mod.color }}>
+                    <span>Launch</span>
+                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── 3. VISUAL 3-STEP FLOW (LESS TEXT, MORE CLARITY) ────────────────── */}
+      <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto border-t border-[var(--border)]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div 
+            onClick={() => onNavigate('expeditions')}
+            className="flex items-start gap-4 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-sky-400 hover:shadow-md transition-all cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-400/30 text-sky-600 font-mono font-black text-sm flex items-center justify-center shrink-0">
+              01
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-[var(--foreground)]">Track Expeditions</h4>
+              <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Explore voyage routes, Antarctic waypoints &amp; stations.</p>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => onNavigate('catalogue')}
+            className="flex items-start gap-4 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-teal-400 hover:shadow-md transition-all cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-400/30 text-teal-600 font-mono font-black text-sm flex items-center justify-center shrink-0">
+              02
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-[var(--foreground)]">Access FAIR Data</h4>
+              <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Search verified datasets with DOI and W3C PROV-O audit trails.</p>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => onNavigate('rag')}
+            className="flex items-start gap-4 p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-400/30 text-indigo-600 font-mono font-black text-sm flex items-center justify-center shrink-0">
+              03
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-[var(--foreground)]">Ask Grounded AI</h4>
+              <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Receive page-cited answers from the official NCPOR corpus.</p>
+            </div>
           </div>
         </div>
       </section>
