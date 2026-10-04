@@ -357,6 +357,70 @@
   ],
   "assets": [
     {
+      "id": "ncpor-bio-penguins",
+      "type": "report",
+      "title": "Avian Ecology and Spatial Distribution of Emperor and Adélie Penguin Colonies in East Antarctica",
+      "abstract": "Consolidated NCPOR polar biology and avian ecology survey documenting the spatial distribution, rookery locations, and seasonal breeding cycles of Adélie penguins (Pygoscelis adeliae) and Emperor penguins (Aptenodytes forsteri) in Larsemann Hills (Bharati Station) and Princess Astrid Coast (Maitri Station).",
+      "expeditionId": "exp-43-isea",
+      "sourceUrl": "https://www.ncpor.res.in/pages/display/270-southern-ocean",
+      "authoritativeProvider": "NCPOR / Polar Biology Division",
+      "contributors": [
+        { "name": "Dr. K. P. Krishnan", "role": "Lead Ecologist", "affiliation": "NCPOR" },
+        { "name": "Dr. Sailesh Agrawal", "role": "Expedition Leader", "affiliation": "NCPOR" }
+      ],
+      "subjects": ["Penguins", "Adélie Penguins", "Emperor Penguins", "Polar Biology", "Larsemann Hills", "Bharati Station", "Maitri Station", "Wildlife", "Antarctica"],
+      "date": "2024-03-15",
+      "spatialCoverageName": "Larsemann Hills and Princess Astrid Coast, East Antarctica",
+      "licence": "Creative Commons Attribution 4.0 International (CC-BY 4.0)",
+      "rightsHolder": "National Centre for Polar and Ocean Research (Ministry of Earth Sciences)",
+      "accessState": "public",
+      "accessPolicy": {
+        "isPublicDerivativeAllowed": true,
+        "requiresApproval": false,
+        "policySource": "NCPOR Polar Ecology & FAIR Data Framework",
+        "allowedAudience": ["public", "researcher", "curator"]
+      },
+      "currentVersionNumber": 1,
+      "versions": [
+        {
+          "versionId": "ver-bio-pen-v1",
+          "assetId": "ncpor-bio-penguins",
+          "versionNumber": 1,
+          "objectKey": "reports/antarctic_penguin_colonies_distribution.pdf",
+          "sha256": "f5a8b34298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b999",
+          "byteSize": 12450000,
+          "mimeType": "application/pdf",
+          "originalFilename": "East-Antarctica-Penguin-Rookeries-Distribution.pdf",
+          "uploadedBy": "curator.ncpor@gov.in",
+          "createdAt": "2024-03-20T10:00:00Z",
+          "processingState": "processed",
+          "extractedText": "NCPOR Polar Avian Ecology Findings: In East Antarctica, Emperor and Adélie penguins occupy distinct ecological niches based on season and ice conditions. 1. Adélie Penguins (Pygoscelis adeliae): Breed during the Antarctic summer (October to February) in ice-free rocky rookeries along the coast. Established colonies are documented across Larsemann Hills within 12km of Bharati Station (69°24'S, 76°11'E) and along the rocky outcrops of Schirmacher Oasis and Princess Astrid Coast near Maitri Station (70°45'S, 11°44'E). During February and March, adults molt on pack ice before heading north into the open ocean. 2. Emperor Penguins (Aptenodytes forsteri): Breed exclusively during the Antarctic winter (May to August) on coastal fast ice, with colonies observed along the Queen Maud Land ice shelf edge. 3. Current Foraging Distribution: Outside breeding, penguins migrate to the marginal ice zone of the Southern Ocean to feed on Antarctic krill (Euphausia superba) and Antarctic silverfish (Pleuragramma antarcticum).",
+          "extractedMetadata": {
+            "pageCount": 42,
+            "detectedLanguage": "en",
+            "exifStripped": true
+          }
+        }
+      ],
+      "derivatives": [
+        {
+          "id": "der-bio-pen-thumb",
+          "parentVersionId": "ver-bio-pen-v1",
+          "type": "thumbnail",
+          "objectKey": "derivatives/penguin_distribution_thumb.webp",
+          "url": "https://images.unsplash.com/photo-1598439210625-5067c578f3f6?auto=format&fit=crop&w=400&q=80",
+          "format": "webp",
+          "byteSize": 38200,
+          "isPublic": true
+        }
+      ],
+      "fairMetrics": { "findableScore": 99, "accessibleScore": 98, "interoperableScore": 95, "reusableScore": 96 },
+      "careCompliant": true,
+      "geographicSensitivityFlag": false,
+      "downloadCount": 512,
+      "viewCount": 3820
+    },
+    {
       "id": "ncpor-rep-43isea",
       "type": "report",
       "title": "43rd Indian Scientific Expedition to Antarctica: Comprehensive Technical and Scientific Report",
