@@ -2,6 +2,7 @@
   "name": "polarconnect-root",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "PolarConnect - Integrated Polar Science Outreach, Knowledge Repository, and Media Dissemination Portal (SIH 26063)",
   "workspaces": [
     "apps/*",
