@@ -142,8 +142,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Desktop Navigation Links */}
-        <nav className="desktop-nav" aria-label="Main navigation">
+        {/* Desktop Navigation Links (Visible on >= 1280px / xl) */}
+        <nav className="hidden xl:flex desktop-nav" aria-label="Main navigation">
           {primaryNavItems.map(item => {
             const isActive = activeTab === item.id;
             return (
@@ -290,7 +290,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-3">
             <span className="text-[var(--signal)] mr-1.5">01 /</span> Explore PolarConnect
           </p>
-          <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
             {primaryNavItems.map(item => {
               const isActive = activeTab === item.id;
               return (
@@ -316,7 +316,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2">
             <span className="text-[var(--signal)] mr-1.5">02 /</span> Workspace & Governance
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {workspaceNavItems.map(item => {
               if (item.showFor && !item.showFor.includes(currentRole)) return null;
               const isActive = activeTab === item.id;
