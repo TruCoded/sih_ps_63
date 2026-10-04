@@ -1,7 +1,6 @@
 {
   "name": "polarconnect-api",
   "version": "1.0.0",
-  "type": "module",
   "description": "PolarConnect REST API and Grounded RAG Engine for MoES / NCPOR",
   "main": "dist/index.js",
   "scripts": {

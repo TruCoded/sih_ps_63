@@ -3,10 +3,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { store } from './store.js';
 import { RAGAnswer, RAGCitation, RAGEvalBenchmark, UserRole, AssetVersion } from '../types/index.js';
+import seedDataJson from '../data/seed-data.json';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const seedPath = path.resolve(__dirname, '../../../../infra/seed/seed-data.json');
+const currentDir = typeof __dirname !== 'undefined' ? __dirname : '';
+const seedPath = path.resolve(currentDir, '../../../../infra/seed/seed-data.json');
 
 interface GoldChunk {
   assetId: string;
@@ -27,13 +27,17 @@ export class RAGEngine {
 
   private loadBenchmarks() {
     try {
-      if (fs.existsSync(seedPath)) {
+      let data: any = null;
+      if (seedPath && fs.existsSync(seedPath)) {
         const raw = fs.readFileSync(seedPath, 'utf-8');
-        const data = JSON.parse(raw);
-        this.benchmarks = data.ragBenchmarks || [];
+        data = JSON.parse(raw);
+      } else {
+        data = seedDataJson;
       }
+      this.benchmarks = data?.ragBenchmarks || [];
     } catch (e) {
-      console.error('[RAGEngine] Error loading benchmarks:', e);
+      console.error('[RAGEngine] Error loading benchmarks, using fallback:', e);
+      this.benchmarks = (seedDataJson as any)?.ragBenchmarks || [];
     }
   }
 

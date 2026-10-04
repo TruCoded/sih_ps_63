@@ -13,17 +13,16 @@ import {
   AccessState 
 } from '../types/index.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import seedDataJson from '../data/seed-data.json';
 
-// Robust seed path — works locally (monorepo) and on cloud (Render/Railway)
+const currentDir = typeof __dirname !== 'undefined' ? __dirname : '';
 const SEED_CANDIDATES = [
-  path.resolve(__dirname, '../../../../infra/seed/seed-data.json'), // local monorepo
-  path.resolve(__dirname, '../../../infra/seed/seed-data.json'),    // alt depth
-  path.resolve(process.cwd(), 'infra/seed/seed-data.json'),         // cwd-relative
-  path.resolve(__dirname, '../seed-data.json'),                      // bundled alongside dist
+  path.resolve(currentDir, '../../../../infra/seed/seed-data.json'),
+  path.resolve(currentDir, '../../../infra/seed/seed-data.json'),
+  path.resolve(process.cwd(), 'infra/seed/seed-data.json'),
+  path.resolve(currentDir, '../seed-data.json'),
 ];
-const seedPath = SEED_CANDIDATES.find(p => fs.existsSync(p)) || SEED_CANDIDATES[0];
+const seedPath = SEED_CANDIDATES.find(p => p && fs.existsSync(p));
 
 class DataStore {
   private stations: StationTelemetry[] = [];
@@ -38,20 +37,27 @@ class DataStore {
 
   private loadSeedData() {
     try {
-      if (fs.existsSync(seedPath)) {
+      let data: any = null;
+      if (seedPath && fs.existsSync(seedPath)) {
         const raw = fs.readFileSync(seedPath, 'utf-8');
-        const data = JSON.parse(raw);
-        this.stations = data.stations || [];
-        this.expeditions = data.expeditions || [];
-        this.assets = data.assets || [];
-        this.auditEvents = data.auditEvents || [];
-        this.contentDrafts = data.contentDrafts || [];
-        console.log(`[Store] Seed data successfully loaded: ${this.stations.length} stations, ${this.expeditions.length} expeditions, ${this.assets.length} assets.`);
+        data = JSON.parse(raw);
       } else {
-        console.warn(`[Store] Seed file not found at ${seedPath}. Initializing empty store.`);
+        data = seedDataJson;
       }
+      this.stations = data?.stations || [];
+      this.expeditions = data?.expeditions || [];
+      this.assets = data?.assets || [];
+      this.auditEvents = data?.auditEvents || [];
+      this.contentDrafts = data?.contentDrafts || [];
+      console.log(`[Store] Seed data successfully loaded: ${this.stations.length} stations, ${this.expeditions.length} expeditions, ${this.assets.length} assets.`);
     } catch (err) {
-      console.error('[Store] Error loading seed data:', err);
+      console.error('[Store] Error loading seed data, using bundled fallback:', err);
+      const data: any = seedDataJson;
+      this.stations = data?.stations || [];
+      this.expeditions = data?.expeditions || [];
+      this.assets = data?.assets || [];
+      this.auditEvents = data?.auditEvents || [];
+      this.contentDrafts = data?.contentDrafts || [];
     }
   }
 
