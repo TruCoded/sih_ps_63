@@ -43,16 +43,16 @@ Acting as a discovery and public engagement layer for the **National Centre for 
 ```mermaid
 flowchart TD
     subgraph Client["Frontend Client (React 18 + TypeScript + Vite)"]
-        UI["Modern Web Interface (:3000)"]
-        HUD["Station Command HUD"]
-        Cat["Scientific Catalogue"]
-        RAGUI["Polar AI Assistant"]
-        ProvUI["Provenance Graph"]
+        UI["Modern Responsive Interface (:3000)"]
+        HUD["Station Command HUD (Live AWS)"]
+        Cat["FAIR / CARE Catalogue"]
+        RAGUI["PolarAI Grounded Assistant"]
+        ProvUI["Provenance Graph (W3C PROV-O)"]
         Edu["Smart Education Hub"]
     end
 
-    subgraph Gateway["Vercel / Vite Proxy"]
-        Proxy["Reverse Proxy / API Gateway"]
+    subgraph Gateway["Vercel Monorepo Gateway"]
+        Proxy["Automated Path Router (/api/*)"]
     end
 
     subgraph Server["Backend API (Node.js + Express + TypeScript)"]
@@ -60,18 +60,10 @@ flowchart TD
         StationSvc["Station Telemetry Service"]
         CatalogSvc["Asset & Catalogue Service"]
         RAGSvc["Hybrid RAG Search Engine"]
-        LLMChain["Multi-Provider LLM Fallback Chain"]
+        LLMChain["5-Tier LLM Resilient Chain"]
         ProvSvc["W3C PROV Graph Engine"]
         AuditSvc["Audit Logging & Ingest Queue"]
-        Store[("In-Memory Store / Seed Corpus")]
-    end
-
-    subgraph LLMProviders["Resilient LLM Chain (Zero-Key Fallback)"]
-        P1["1. Groq (Llama-3)"]
-        P2["2. Google Gemini"]
-        P3["3. Together AI"]
-        P4["4. Hugging Face Inference"]
-        P5["5. Pollinations.ai (No API Key Required)"]
+        Store[("In-Memory Store / NCPOR Seed Corpus")]
     end
 
     subgraph External["Authoritative Systems"]
@@ -87,9 +79,51 @@ flowchart TD
     StationSvc --> Store
     RAGSvc --> Store
     RAGSvc --> LLMChain
-    LLMChain --> P1 --> P2 --> P3 --> P4 --> P5
     Store -.->|Authoritative External Links| NCPOR & NPDC & DOIs
 ```
+
+---
+
+## 🤖 PolarAI: Grounded RAG & Multi-Tier AI Architecture
+
+PolarConnect incorporates a resilient, hallucination-resistant **Retrieval-Augmented Generation (RAG)** pipeline designed specifically for polar research:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Researcher / Student / Public
+    participant UI as PolarAI Assistant UI
+    participant Router as Express API Router (/api/ask)
+    participant RAG as Hybrid RAG Retrieval Engine
+    participant Corpus as NCPOR Seed Corpus (15+ Datasets)
+    participant Fallback as 5-Tier Multi-Provider LLM Chain
+    participant Verifier as Grounding & Citation Verifier
+
+    User->>UI: Submits Query (e.g., "Where are penguins now?")
+    UI->>Router: POST /api/ask { query, userRole, filters }
+    Router->>RAG: Tokenize & Extract Polar Entities
+    RAG->>Corpus: Hybrid TF-IDF & Keyword Retrieval
+    Corpus-->>RAG: Matched Evidence Chunks (Princess Astrid, Larsemann Hills)
+
+    alt Scientific Corpus Match Found
+        RAG->>Fallback: Grounded Prompt + Scientific Evidence Context
+        Note over Fallback: Provider Waterfall:<br/>1. Groq (Llama-3-70b)<br/>2. Google Gemini 1.5<br/>3. Together AI<br/>4. Hugging Face Inference<br/>5. Pollinations.ai (Zero-Key Fallback)
+        Fallback-->>Verifier: LLM Candidate Response
+        Verifier->>Verifier: Evaluate Citation Overlap & Grounding Score (≥ 95%)
+        Verifier-->>UI: Verified Response + Citable DOIs + Telemetry Deep Links
+    else General Polar Domain Inquiry
+        RAG->>Fallback: General Polar Knowledge Fallback with Attribution
+        Fallback-->>Verifier: Curated General Polar Science Answer
+        Verifier-->>UI: Contextual Answer + Suggested NCPOR Data Queries
+    end
+
+    UI-->>User: Markdown Answer + Source Cards + Audio TTS Synthesis
+```
+
+### 🛡️ Hallucination Safeguards & Security Benchmarks
+- **Zero-Key Reliability**: Native fallback to Pollinations.ai ensures uninterrupted evaluation even without pre-configured API keys.
+- **Role-Aware Filtering**: Public visitors receive open data summaries; accredited researchers access full time-series DOIs and cruise metadata.
+- **Built-in Benchmark Suite**: Automated evaluation endpoint (`/api/benchmarks/run`) executing 25 scientific fidelity, injection resistance, and embargo compliance test cases.
 
 ---
 
